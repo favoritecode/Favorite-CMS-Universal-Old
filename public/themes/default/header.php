@@ -10,10 +10,19 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title><?php echo htmlspecialchars($metaTitle, ENT_QUOTES, 'UTF-8'); ?></title>
     <?php if (!empty($metaDesc)): ?>
         <meta name="description" content="<?php echo htmlspecialchars($metaDesc, ENT_QUOTES, 'UTF-8'); ?>">
     <?php endif; ?>
+    <script>
+        (function () {
+            var saved = localStorage.getItem('favorite-cms-site-theme');
+            document.documentElement.dataset.theme = saved === 'light' || saved === 'dark'
+                ? saved
+                : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        }());
+    </script>
     <link rel="stylesheet" href="/themes/default/assets/css/style.css">
 </head>
 <body>
@@ -30,6 +39,10 @@ $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
                 <?php endif; ?>
             </div>
         </a>
+
+        <button type="button" class="theme-toggle" id="site-theme-toggle" aria-label="Switch color theme" aria-pressed="false">
+            <span aria-hidden="true" id="site-theme-icon">&#9790;</span>
+        </button>
 
         <!-- Mobile Menu Toggle Button -->
         <button type="button" class="mobile-nav-toggle" id="mobile-nav-btn" aria-label="Toggle navigation menu" aria-expanded="false">

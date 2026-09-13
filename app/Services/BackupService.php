@@ -94,7 +94,7 @@ class BackupService
             $manifest = [
                 'manifest_version' => 1,
                 'cms_name'         => 'Favorite CMS Universal',
-                'cms_version'      => defined('APP_VERSION') ? APP_VERSION : '1.0.0-beta',
+                'cms_version'      => defined('APP_VERSION') ? APP_VERSION : '1.2.0',
                 'schema_version'   => $this->getSchemaVersion($db),
                 'created_at'       => date('c'),
                 'site_name'        => Setting::get('general', 'site_name', 'Favorite CMS'),

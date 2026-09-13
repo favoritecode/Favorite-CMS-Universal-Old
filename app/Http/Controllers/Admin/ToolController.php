@@ -188,7 +188,7 @@ class ToolController
         $tables = $db->select('SHOW TABLES');
 
         $backup = [
-            'cms_version' => defined('APP_VERSION') ? APP_VERSION : '1.0.0-beta',
+            'cms_version' => defined('APP_VERSION') ? APP_VERSION : '1.2.0',
             'exported_at' => date('c'),
             'tables'      => [],
         ];

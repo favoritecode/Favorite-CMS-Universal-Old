@@ -22,6 +22,7 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <title><?php echo htmlspecialchars($pageTitle ?? 'Admin', ENT_QUOTES, 'UTF-8'); ?> &lsaquo; <?php echo htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8'); ?> &mdash; Favorite CMS</title>
     <?php if (!empty($siteFaviconUrl)): ?>
         <?php
@@ -37,6 +38,14 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
         ?>
         <link rel="icon" type="<?php echo htmlspecialchars($favType, ENT_QUOTES, 'UTF-8'); ?>" href="<?php echo htmlspecialchars($siteFaviconUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <?php endif; ?>
+    <script>
+        (function () {
+            var saved = localStorage.getItem('favorite-cms-admin-theme');
+            document.documentElement.dataset.theme = saved === 'light' || saved === 'dark'
+                ? saved
+                : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        }());
+    </script>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -308,6 +317,60 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
             color: var(--wp-text-muted);
             font-size: 12px;
         }
+
+        /* Professional UI layer: shared by every core admin screen. */
+        :root {
+            --surface: #ffffff;
+            --surface-raised: #ffffff;
+            --surface-muted: #f8fafc;
+            --surface-hover: #f1f5f9;
+            --focus-ring: rgba(34, 113, 177, .22);
+            color-scheme: light;
+        }
+        :root[data-theme="dark"] {
+            --wp-dark: #0b1220; --wp-blue: #60a5fa; --wp-blue-hover: #93c5fd;
+            --wp-light: #0f172a; --wp-border: #334155; --wp-text: #e5edf7;
+            --wp-text-muted: #a5b4c7; --wp-danger: #fb7185; --wp-success: #4ade80;
+            --surface: #172033; --surface-raised: #1e293b; --surface-muted: #111b2e;
+            --surface-hover: #25334a; --focus-ring: rgba(96, 165, 250, .3);
+            color-scheme: dark;
+        }
+        body { line-height: 1.5; }
+        .wp-topbar { min-height: 48px; height: auto; padding: 0 20px; }
+        .wp-sidebar { padding: 14px 8px; box-shadow: 4px 0 18px rgba(15,23,42,.08); }
+        .wp-menu-link { padding: 10px 12px; border-radius: 7px; transition: background .16s, color .16s, transform .16s; }
+        .wp-menu-link:hover { transform: translateX(2px); }
+        .wp-content { padding: 26px clamp(18px, 3vw, 36px) 40px; }
+        .page-title { font-weight: 650; letter-spacing: -.025em; color: var(--wp-text); }
+        .wp-table-wrap, .form-card { background: var(--surface); border-radius: 10px; box-shadow: 0 8px 28px rgba(15,23,42,.06); }
+        table.wp-table th { color: var(--wp-text); background: var(--surface-muted); }
+        table.wp-table td { border-bottom-color: var(--wp-border); }
+        table.wp-table tr:hover td { background: var(--surface-hover); }
+        .form-group label { color: var(--wp-text); }
+        .form-control { background: var(--surface-raised); color: var(--wp-text); }
+        .form-control:focus { box-shadow: 0 0 0 3px var(--focus-ring); }
+        .icon-button { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:6px 10px; border:1px solid rgba(255,255,255,.16); border-radius:8px; background:rgba(255,255,255,.08); color:#fff; font:inherit; cursor:pointer; }
+        .icon-button:hover { background: rgba(255,255,255,.15); }
+        :root[data-theme="dark"] .btn-secondary { background: var(--surface-raised); color: var(--wp-blue); }
+        :root[data-theme="dark"] .notice { background: var(--surface-raised); color: var(--wp-text); }
+        :root[data-theme="dark"] .notice-success { background:#102b22; color:#bbf7d0; }
+        :root[data-theme="dark"] .notice-error { background:#35151e; color:#fecdd3; }
+        :root[data-theme="dark"] table.wp-table tr.is-selected td { background:#173152 !important; }
+        :root[data-theme="dark"] ul.subsubsub a.current { color:#f8fafc; }
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid var(--focus-ring); outline-offset:2px; }
+        @media (max-width: 782px) {
+            :root { --sidebar-width: 100%; }
+            .wp-topbar { position:relative; flex-wrap:wrap; gap:8px; padding:9px 14px; }
+            .topbar-right > span, .topbar-right > a:not(.logout-link) { display:none; }
+            .wp-body { display:block; }
+            .wp-sidebar { width:100%; padding:8px; }
+            .wp-menu { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; }
+            .wp-submenu { position:relative; border-radius:7px; }
+            .wp-content { padding:18px 14px 32px; }
+            .form-row { grid-template-columns:1fr; }
+        }
+        @media (max-width: 480px) { .wp-menu { grid-template-columns:1fr; } .form-card { padding:18px; } }
+        @media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none !important; scroll-behavior:auto !important; } }
     </style>
 </head>
 <body>
@@ -318,8 +381,9 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
         </div>
         <div class="topbar-right">
             <span>Howdy, <strong><?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?></strong></span>
+            <button type="button" class="icon-button" id="admin-theme-toggle" aria-label="Switch color theme" aria-pressed="false"><span aria-hidden="true" id="admin-theme-icon">&#9790;</span><span id="admin-theme-label">Dark</span></button>
             <a href="/admin/users/profile">Edit Profile</a>
-            <a href="/admin/logout" style="color: #ff8080;">Log Out</a>
+            <a href="/admin/logout" class="logout-link" style="color: #ff8080;">Log Out</a>
         </div>
     </div>
 
@@ -472,6 +536,26 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
     </div>
 
     <script>
+    (function () {
+        var toggle = document.getElementById('admin-theme-toggle');
+        var label = document.getElementById('admin-theme-label');
+        var icon = document.getElementById('admin-theme-icon');
+        if (!toggle) return;
+        function renderThemeToggle() {
+            var dark = document.documentElement.dataset.theme === 'dark';
+            toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            label.textContent = dark ? 'Light' : 'Dark';
+            icon.innerHTML = dark ? '&#9788;' : '&#9790;';
+        }
+        toggle.addEventListener('click', function () {
+            var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem('favorite-cms-admin-theme', next);
+            renderThemeToggle();
+        });
+        renderThemeToggle();
+    }());
+
     window.initAdminMultiSelect = function(formId, options) {
         options = options || {};
         var form = document.getElementById(formId);

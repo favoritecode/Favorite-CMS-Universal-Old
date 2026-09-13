@@ -5,6 +5,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+## [1.2.0] - 2026-09-13
+
+### Added
+- System-aware dark mode for the complete core admin interface, installer, installation-success screen, and bundled default public theme.
+- One-click accessible light/dark theme controls with browser-persisted preferences.
+- Responsive admin navigation for tablet and mobile screens.
+- Strong visible keyboard focus states and reduced-motion support across core UI controls.
+
+### Changed
+- Refreshed the shared admin design system with professional spacing, surfaces, cards, tables, forms, shadows, hover states, and typography. Because the update is applied in the master layout, all existing core admin screens and plugin-admin screens inherit it without losing features.
+- Improved the default public theme with dark surfaces, readable contrast, polished theme controls, and dark-aware forms, pagination, cards, empty states, and headers.
+- Increased touch-target usability and improved mobile layout behavior without changing routes, permissions, workflows, or stored content.
+
+### Fixed
+- Fixed admin layouts overflowing or becoming difficult to navigate on narrow screens.
+- Fixed light-only hard-coded table, form, notice, and selected-row colors becoming unreadable in dark mode.
+- Prevented a flash of the wrong color theme by applying the saved preference before styles render.
+- Fixed theme toggle state, icon, and accessible label becoming inconsistent after switching modes.
+- Added graceful operating-system theme fallback when no preference has been saved.
+
+### Compatibility
+- No features, routes, permissions, database fields, themes, plugins, or content workflows were removed.
+- Existing installations can upgrade without a database migration.
+
 ## [1.0.0-beta] - 2026-09-04
 
 ### Added

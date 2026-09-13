@@ -1400,3 +1400,55 @@ body.layout-none .site-content {
         align-items: flex-start;
     }
 }
+
+/* Native dark mode and professional interaction polish. */
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-body);
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: background var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+}
+.theme-toggle:hover { background: var(--color-surface-hover); border-color: var(--color-border-hover); transform: translateY(-1px); }
+:root[data-theme="dark"] {
+    --color-primary: #60a5fa;
+    --color-primary-hover: #93c5fd;
+    --color-primary-soft: #172554;
+    --color-primary-border: #1e3a8a;
+    --color-ink: #f8fafc;
+    --color-body: #d5deeb;
+    --color-muted: #9eacc0;
+    --color-subtle: #718096;
+    --color-bg: #0b1220;
+    --color-surface: #121c2e;
+    --color-surface-hover: #1c2940;
+    --color-border: #2b3a50;
+    --color-border-hover: #475569;
+    color-scheme: dark;
+}
+:root[data-theme="dark"] .site-header { background: rgba(18, 28, 46, .94); }
+:root[data-theme="dark"] .header-search-input,
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] select { background: #0f192a; color: var(--color-ink); border-color: var(--color-border); }
+:root[data-theme="dark"] .post-card-thumb,
+:root[data-theme="dark"] .empty-icon-wrap { background: #1c2940; }
+:root[data-theme="dark"] .pag-num:hover,
+:root[data-theme="dark"] .pag-btn:hover { background: var(--color-surface-hover); }
+:root[data-theme="dark"] .error-404-code { color: #334155; }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
+    outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}

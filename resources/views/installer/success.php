@@ -60,6 +60,15 @@ $h = static fn ($value): string => htmlspecialchars((string)$value, ENT_QUOTES, 
         @media (max-width: 560px) {
             dl { grid-template-columns: 1fr; }
         }
+        @media (prefers-color-scheme: dark) {
+            :root { color-scheme: dark; }
+            body { background: #0b1220; color: #e5edf7; }
+            .panel { background: #172033; border-color: #334155; box-shadow: 0 14px 35px rgba(0,0,0,.28); }
+            h1, dt { color: #f8fafc; }
+            p, dd { color: #b6c2d2; }
+            .success { background: #102b22; color: #bbf7d0; }
+            a.secondary { background: #1e293b; color: #93c5fd; border-color: #475569; }
+        }
     </style>
 </head>
 <body>

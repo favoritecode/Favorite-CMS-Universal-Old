@@ -3,6 +3,24 @@
  * Lightweight, zero dependencies, accessible interactions.
  */
 document.addEventListener('DOMContentLoaded', function() {
+    // Persisted light/dark theme. Falls back to the operating-system preference.
+    const themeToggle = document.getElementById('site-theme-toggle');
+    const themeIcon = document.getElementById('site-theme-icon');
+    const renderThemeToggle = function() {
+        const dark = document.documentElement.dataset.theme === 'dark';
+        if (themeToggle) themeToggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        if (themeIcon) themeIcon.innerHTML = dark ? '&#9788;' : '&#9790;';
+    };
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem('favorite-cms-site-theme', next);
+            renderThemeToggle();
+        });
+        renderThemeToggle();
+    }
+
     // 1. Mobile Menu Toggle
     const navBtn = document.getElementById('mobile-nav-btn');
     const navWrap = document.getElementById('header-nav-wrap');

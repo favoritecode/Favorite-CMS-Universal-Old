@@ -140,6 +140,20 @@ $field = static fn (string $key, string $fallback = ''): string => (string)($old
             .grid, .checks { grid-template-columns: 1fr; }
             .panel { padding: 20px; }
         }
+        @media (prefers-color-scheme: dark) {
+            :root { color-scheme: dark; }
+            body { background: #0b1220; color: #e5edf7; }
+            .brand h1, h2, h3, label { color: #f8fafc; }
+            .brand p, p, .description, .footer { color: #a5b4c7; }
+            .panel { background: #172033; border-color: #334155; box-shadow: 0 14px 35px rgba(0,0,0,.28); }
+            h2 { border-bottom-color: #334155; }
+            .check, .toggle-box { background: #111b2e; border-color: #3b4b63; }
+            input, select { background: #0f192a; border-color: #475569; color: #f8fafc; }
+            button.secondary { background: #1e293b; border-color: #475569; color: #dbeafe; }
+            .tab-buttons { border-bottom-color: #334155; }
+            .tab-btn { color: #a5b4c7; }
+            .tab-btn.active { color: #93c5fd; background: #172554; }
+        }
     </style>
 </head>
 <body>
