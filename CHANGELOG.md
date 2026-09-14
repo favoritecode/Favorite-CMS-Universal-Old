@@ -3,6 +3,19 @@
 All notable changes to **Favorite CMS Universal** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-09-15
+
+### Added & Security
+- **Authoritative 6-Role Permission Architecture**:
+  - Aligned server-side permissions across all six core roles: Super Admin, Admin, Editor, Moderator, Author, Subscriber.
+  - Added `moderate_comments` and `edit_others_posts` permissions with upgrade migration `016_update_role_permissions.php`.
+  - Enforced strict authorization separation: Moderator is granted "Edit Other Users' Posts" without inheriting trash, restore, or permanent deletion rights over other users' posts.
+  - Granted Editor role full content management capabilities: Post Approval & Rejection, Comment Moderation, Pages, Categories/Tags, Media, and Navigation Menus.
+  - Restricted Author strictly to own content creation and editing; blocked from editing other users' posts, post moderation, comment moderation, pages, and menus.
+  - Restricted Subscriber to basic account management; blocked from post creation, media uploads, and administrative functions.
+  - Updated Admin navigation layout with capability-level visibility controls for Posts, Pages, Media, Comments, and Menus.
+  - Added comprehensive 15-scenario integration test suite (`RolePermissionMatrixTest.php`).
+
 ## [1.0.11] - 2026-09-15
 
 ### Fixed & Security

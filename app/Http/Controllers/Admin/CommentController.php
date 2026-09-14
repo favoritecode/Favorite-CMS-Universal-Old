@@ -66,8 +66,20 @@ class CommentController
         return Response::make((string)ob_get_clean(), 200);
     }
 
+    protected function checkModeratorPermission(): ?Response
+    {
+        $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
+        if (!$currentUser || !$currentUser->isActive() || !$currentUser->canModerateComments()) {
+            return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to moderate comments.</p>', 403);
+        }
+        return null;
+    }
+
     public function approve(Request $request): Response
     {
+        if ($resp = $this->checkModeratorPermission()) {
+            return $resp;
+        }
         $this->validateCsrf($request);
         $id = (int)$request->get('id', 0);
         $comment = Comment::find($id);
@@ -80,6 +92,9 @@ class CommentController
 
     public function unapprove(Request $request): Response
     {
+        if ($resp = $this->checkModeratorPermission()) {
+            return $resp;
+        }
         $this->validateCsrf($request);
         $id = (int)$request->get('id', 0);
         $comment = Comment::find($id);
@@ -92,6 +107,9 @@ class CommentController
 
     public function spam(Request $request): Response
     {
+        if ($resp = $this->checkModeratorPermission()) {
+            return $resp;
+        }
         $this->validateCsrf($request);
         $id = (int)$request->get('id', 0);
         $comment = Comment::find($id);
@@ -104,6 +122,9 @@ class CommentController
 
     public function trash(Request $request): Response
     {
+        if ($resp = $this->checkModeratorPermission()) {
+            return $resp;
+        }
         $this->validateCsrf($request);
         $id = (int)$request->get('id', 0);
         $comment = Comment::find($id);
@@ -116,6 +137,9 @@ class CommentController
 
     public function delete(Request $request): Response
     {
+        if ($resp = $this->checkModeratorPermission()) {
+            return $resp;
+        }
         $this->validateCsrf($request);
         $id = (int)$request->get('id', 0);
         $comment = Comment::find($id);

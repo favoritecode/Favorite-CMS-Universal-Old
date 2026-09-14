@@ -211,7 +211,7 @@ class PostController
             return Response::redirect('/admin/posts');
         }
 
-        if (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id) {
+        if (!$currentUser->canEditPost($post)) {
             $_SESSION['flash_error'] = 'You do not have permission to edit this post.';
             return Response::redirect('/admin/posts');
         }
@@ -261,7 +261,7 @@ class PostController
             return Response::redirect('/admin/posts');
         }
 
-        if (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id) {
+        if (!$currentUser->canEditPost($post)) {
             $_SESSION['flash_error'] = 'You do not have permission to edit this post.';
             return Response::redirect('/admin/posts');
         }

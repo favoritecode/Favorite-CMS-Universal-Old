@@ -173,7 +173,7 @@ foreach ($filesToCopy as $file) {
 }
 
 // 8b. Add authoritative release metadata manifest
-$appVersion = '1.0.11';
+$appVersion = '1.0.12';
 $bootstrapPath = $sourceDir . '/bootstrap.php';
 if (file_exists($bootstrapPath) && preg_match("/define\(\s*['\"]APP_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", (string)file_get_contents($bootstrapPath), $m)) {
     $appVersion = $m[1];

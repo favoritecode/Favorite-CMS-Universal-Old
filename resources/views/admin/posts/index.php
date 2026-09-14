@@ -1,6 +1,8 @@
 <div class="page-header">
     <h1 class="page-title">Posts</h1>
-    <a href="/admin/posts/new" class="btn btn-primary">Add New Post</a>
+    <?php if ($currentUser && $currentUser->canCreatePosts()): ?>
+        <a href="/admin/posts/new" class="btn btn-primary">Add New Post</a>
+    <?php endif; ?>
 </div>
 
 <ul class="subsubsub">
@@ -94,23 +96,39 @@
                             <?php endif; ?>
                         </td>
                         <td>
+                            <?php
+                            $canEditThisPost = $currentUser && $currentUser->canEditPost($post);
+                            $canDeleteThisPost = $currentUser && $currentUser->canUpdatePosts() && ($currentUser->canModeratePosts() || (int)$post->author_id === (int)$currentUser->id);
+                            ?>
                             <strong>
-                                <a href="/admin/posts/edit?id=<?php echo (int)$post->id; ?>" style="color: #1d2327; font-size: 14px; font-weight: 600;">
-                                    <?php echo htmlspecialchars($post->title, ENT_QUOTES, 'UTF-8'); ?>
-                                </a>
+                                <?php if ($canEditThisPost): ?>
+                                    <a href="/admin/posts/edit?id=<?php echo (int)$post->id; ?>" style="color: #1d2327; font-size: 14px; font-weight: 600;">
+                                        <?php echo htmlspecialchars($post->title, ENT_QUOTES, 'UTF-8'); ?>
+                                    </a>
+                                <?php else: ?>
+                                    <span style="color: #1d2327; font-size: 14px; font-weight: 600;">
+                                        <?php echo htmlspecialchars($post->title, ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
+                                <?php endif; ?>
                             </strong>
                             <div class="row-actions">
                                 <?php if ($post->status === 'trash'): ?>
-                                    <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/restore?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-blue);">Restore</button> |
-                                    <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/delete?id=<?php echo (int)$post->id; ?>" class="core-action-link" onclick="return confirm('Permanently delete this post?');" style="color: var(--wp-danger);">Delete Permanently</button>
+                                    <?php if ($canDeleteThisPost): ?>
+                                        <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/restore?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-blue);">Restore</button> |
+                                        <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/delete?id=<?php echo (int)$post->id; ?>" class="core-action-link" onclick="return confirm('Permanently delete this post?');" style="color: var(--wp-danger);">Delete Permanently</button>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <?php if ($post->status === 'pending' && $currentUser && $currentUser->canModeratePosts()): ?>
                                         <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/approve?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: #00a32a; font-weight: 700;">&#10003; Approve</button> |
                                         <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/reject?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: #d63638; font-weight: 600;">&#10007; Reject</button> |
                                     <?php endif; ?>
-                                    <a href="/admin/posts/edit?id=<?php echo (int)$post->id; ?>">Edit</a> |
-                                    <a href="/post/<?php echo htmlspecialchars($post->slug, ENT_QUOTES, 'UTF-8'); ?>" target="_blank">View Post</a> |
-                                    <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/trash?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-danger);">Trash</button>
+                                    <?php if ($canEditThisPost): ?>
+                                        <a href="/admin/posts/edit?id=<?php echo (int)$post->id; ?>">Edit</a> |
+                                    <?php endif; ?>
+                                    <a href="/post/<?php echo htmlspecialchars($post->slug, ENT_QUOTES, 'UTF-8'); ?>" target="_blank">View Post</a>
+                                    <?php if ($canDeleteThisPost): ?>
+                                        | <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/trash?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-danger);">Trash</button>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </td>

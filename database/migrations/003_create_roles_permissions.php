@@ -79,6 +79,8 @@ class CreateRolesPermissions
             ['upload_large_media', 'Upload Large Media', 'Allow uploading large media files up to server max', 'content'],
             ['upload_moderator_media', 'Upload Moderator Media', 'Allow uploading media files up to moderator limit (500 MB)', 'content'],
             ['approve_posts',      'Approve Posts',      'Review and approve submitted posts',                 'content'],
+            ['moderate_comments',  'Moderate Comments',  'Approve, unapprove, spam, and trash comments',       'content'],
+            ['edit_others_posts',  'Edit Other Users Posts', 'Edit posts authored by other users',             'content'],
             ['manage_menus',       'Manage Menus',       'Create and edit menus',                              'content'],
             ['manage_taxonomy',    'Manage Taxonomy',    'Manage categories and tags',                         'content'],
             ['manage_users',       'Manage Users',       'Create and manage users',                            'users'],

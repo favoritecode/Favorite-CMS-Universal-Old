@@ -642,8 +642,15 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                 }
                 ?>
                 <?php
+                $canAccessPosts = $currentAdminUser && ($currentAdminUser->canCreatePosts() || $currentAdminUser->canUpdatePosts() || $currentAdminUser->canModeratePosts());
+                $canCreatePosts = $currentAdminUser && $currentAdminUser->canCreatePosts();
+                $canManageTaxonomies = $currentAdminUser && $currentAdminUser->canManageTaxonomies();
+                $canManagePages = $currentAdminUser && $currentAdminUser->canManagePages();
+                $canUploadMedia = $currentAdminUser && $currentAdminUser->canUploadMedia();
+                $canManageMenus = $currentAdminUser && $currentAdminUser->canManageMenus();
                 $isPostsActive = in_array($activeMenu, ['posts', 'posts-new', 'categories', 'tags']);
                 ?>
+                <?php if ($canAccessPosts): ?>
                 <li class="wp-menu-item has-submenu <?php echo $isPostsActive ? 'active is-expanded' : ''; ?>">
                     <a href="/admin/posts" class="wp-menu-link" aria-haspopup="true" aria-expanded="<?php echo $isPostsActive ? 'true' : 'false'; ?>" aria-controls="submenu-posts">
                         <span>📝 Posts</span>
@@ -656,7 +663,9 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                     </a>
                     <ul class="wp-submenu" id="submenu-posts">
                         <li><a href="/admin/posts" class="<?php echo $activeMenu === 'posts' ? 'active' : ''; ?>">All Posts</a></li>
-                        <li><a href="/admin/posts/new" class="<?php echo $activeMenu === 'posts-new' ? 'active' : ''; ?>">Add New Post</a></li>
+                        <?php if ($canCreatePosts): ?>
+                            <li><a href="/admin/posts/new" class="<?php echo $activeMenu === 'posts-new' ? 'active' : ''; ?>">Add New Post</a></li>
+                        <?php endif; ?>
                         <?php if ($canModerate): ?>
                             <li>
                                 <a href="/admin/posts?status=pending" style="<?php echo $pendingCount > 0 ? 'font-weight: 700; color: #e5a00d;' : ''; ?>">
@@ -664,10 +673,14 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                                 </a>
                             </li>
                         <?php endif; ?>
-                        <li><a href="/admin/taxonomies/categories" class="<?php echo $activeMenu === 'categories' ? 'active' : ''; ?>">Categories</a></li>
-                        <li><a href="/admin/taxonomies/tags" class="<?php echo $activeMenu === 'tags' ? 'active' : ''; ?>">Tags</a></li>
+                        <?php if ($canManageTaxonomies): ?>
+                            <li><a href="/admin/taxonomies/categories" class="<?php echo $activeMenu === 'categories' ? 'active' : ''; ?>">Categories</a></li>
+                            <li><a href="/admin/taxonomies/tags" class="<?php echo $activeMenu === 'tags' ? 'active' : ''; ?>">Tags</a></li>
+                        <?php endif; ?>
                     </ul>
                 </li>
+                <?php endif; ?>
+                <?php if ($canManagePages): ?>
                 <?php
                 $isPagesActive = in_array($activeMenu, ['pages', 'pages-new']);
                 ?>
@@ -683,9 +696,12 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                         <li><a href="/admin/pages/new" class="<?php echo $activeMenu === 'pages-new' ? 'active' : ''; ?>">Add New Page</a></li>
                     </ul>
                 </li>
+                <?php endif; ?>
+                <?php if ($canUploadMedia): ?>
                 <li class="wp-menu-item <?php echo $activeMenu === 'media' ? 'active' : ''; ?>">
                     <a href="/admin/media" class="wp-menu-link">🖼️ Media</a>
                 </li>
+                <?php endif; ?>
                 <?php if ($canModerateComments): ?>
                     <li class="wp-menu-item <?php echo $activeMenu === 'comments' ? 'active' : ''; ?>">
                         <a href="/admin/comments" class="wp-menu-link">
@@ -717,6 +733,10 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                     </li>
                     <li class="wp-menu-item <?php echo $activeMenu === 'plugins' ? 'active' : ''; ?>">
                         <a href="/admin/plugins" class="wp-menu-link">🔌 Plugins</a>
+                    </li>
+                <?php elseif ($canManageMenus): ?>
+                    <li class="wp-menu-item <?php echo $activeMenu === 'menus' ? 'active' : ''; ?>">
+                        <a href="/admin/menus" class="wp-menu-link">🎨 Menus</a>
                     </li>
                 <?php endif; ?>
 

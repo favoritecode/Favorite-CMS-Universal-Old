@@ -76,8 +76,18 @@ class User extends BaseModel
 
     public function getRoles(): array
     {
-        $sql = "SELECT r.* FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?";
-        return $this->db->select($sql, [$this->id]);
+        $roles = [];
+        if (!empty($this->id)) {
+            $sql = "SELECT r.* FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?";
+            $roles = $this->db->select($sql, [$this->id]);
+        }
+        if (empty($roles) && !empty($this->role_id)) {
+            $r = $this->db->selectOne("SELECT * FROM roles WHERE id = ?", [(int)$this->role_id]);
+            if ($r) {
+                $roles = [$r];
+            }
+        }
+        return $roles;
     }
 
     public function hasRole(string $roleSlug): bool
@@ -128,26 +138,61 @@ class User extends BaseModel
         return $this->db->select($sql, [$this->id]);
     }
 
+    public static function getDefaultRolePermissions(string $roleSlug): array
+    {
+        $target = strtolower(trim(str_replace(['_', ' '], '-', $roleSlug)));
+        return match ($target) {
+            'super-admin', 'superadmin' => [
+                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
+                'moderate_comments', 'manage_pages', 'publish_pages', 'manage_media', 'upload_large_media',
+                'upload_moderator_media', 'manage_menus', 'manage_taxonomy', 'manage_users', 'manage_roles',
+                'manage_themes', 'manage_plugins', 'manage_settings', 'unfiltered_html', 'manage_seo',
+                'manage_options',
+            ],
+            'admin', 'administrator' => [
+                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
+                'moderate_comments', 'manage_pages', 'publish_pages', 'manage_media', 'upload_large_media',
+                'upload_moderator_media', 'manage_menus', 'manage_taxonomy', 'manage_users', 'manage_roles',
+                'manage_themes', 'manage_plugins', 'manage_settings', 'unfiltered_html', 'manage_seo',
+                'manage_options',
+            ],
+            'editor' => [
+                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
+                'moderate_comments', 'manage_pages', 'publish_pages', 'manage_media',
+                'upload_moderator_media', 'manage_menus', 'manage_taxonomy', 'manage_seo',
+            ],
+            'moderator' => [
+                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
+                'moderate_comments', 'manage_media', 'upload_moderator_media',
+            ],
+            'author' => [
+                'view_admin', 'manage_posts', 'manage_media',
+            ],
+            'subscriber' => [],
+            default => [],
+        };
+    }
+
     public function hasPermission(string $permissionSlug): bool
     {
         if ($this->hasRole('super-admin') || $this->isSuperAdmin()) {
             return true;
         }
 
-        if (($this->hasRole('admin') || $this->hasRole('administrator')) && in_array($permissionSlug, [
-            'manage_options',
-            'view_admin',
-            'manage_users',
-            'manage_plugins',
-            'manage_themes',
-            'manage_settings',
-        ], true)) {
+        $cleanSlug = strtolower(trim(str_replace(['_', ' '], '-', $permissionSlug)));
+
+        // Built-in role capability resolution
+        $roleSlug = $this->getPrimaryRoleSlug();
+        $builtInPermissions = self::getDefaultRolePermissions($roleSlug);
+        if (in_array($permissionSlug, $builtInPermissions, true) || in_array($cleanSlug, $builtInPermissions, true)) {
             return true;
         }
 
         $permissions = $this->getPermissions();
         foreach ($permissions as $permission) {
-            if ($permission->slug === $permissionSlug) {
+            $pSlug = strtolower(trim((string)($permission->slug ?? '')));
+            $cleanPSlug = str_replace(['_', ' '], '-', $pSlug);
+            if ($pSlug === $permissionSlug || $cleanPSlug === $cleanSlug) {
                 return true;
             }
         }
@@ -394,17 +439,88 @@ class User extends BaseModel
 
     public function canCreatePosts(): bool
     {
-        return $this->isActive();
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('moderator')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('author')
+            || $this->hasPermission('create_posts');
     }
 
     public function canUpdatePosts(): bool
     {
-        return $this->isActive();
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
+            || $this->hasRole('author')
+            || $this->hasPermission('manage_posts')
+            || $this->hasPermission('edit_posts');
     }
 
     public function canUploadMedia(): bool
     {
-        return $this->isActive();
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('moderator')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('author')
+            || $this->hasPermission('manage_media')
+            || $this->hasPermission('upload_files');
+    }
+
+    public function canEditOtherPosts(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
+            || $this->hasPermission('edit_others_posts')
+            || $this->hasPermission('manage_posts');
+    }
+
+    public function canEditPost(mixed $post): bool
+    {
+        if (!$this->isActive() || !$this->canUpdatePosts()) {
+            return false;
+        }
+
+        $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
+        if ($authorId > 0 && $authorId === (int)$this->id) {
+            return true;
+        }
+
+        return $this->canEditOtherPosts();
     }
 
     public function canSubmitComments(): bool
@@ -441,6 +557,10 @@ class User extends BaseModel
             return false;
         }
 
+        if ($this->hasRole('subscriber') || $this->hasRole('author')) {
+            return false;
+        }
+
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('moderator')
@@ -451,6 +571,10 @@ class User extends BaseModel
     public function canModerateComments(): bool
     {
         if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author')) {
             return false;
         }
 
@@ -468,6 +592,10 @@ class User extends BaseModel
             return false;
         }
 
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator') || $this->hasRole('editor')) {
+            return false;
+        }
+
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasPermission('manage_users');
@@ -479,15 +607,55 @@ class User extends BaseModel
             return false;
         }
 
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator')) {
+            return false;
+        }
+
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('editor')
             || $this->hasPermission('manage_pages');
     }
 
+    public function canManageTaxonomies(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasPermission('manage_taxonomy');
+    }
+
+    public function canManageMenus(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasPermission('manage_menus');
+    }
+
     public function canManagePlugins(): bool
     {
         if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator') || $this->hasRole('editor')) {
             return false;
         }
 

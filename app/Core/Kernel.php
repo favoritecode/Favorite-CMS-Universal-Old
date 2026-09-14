@@ -338,6 +338,10 @@ class Kernel
 
         // Module 2: Posts
         if (str_starts_with($path, '/admin/posts')) {
+            if (!$currentUser->canCreatePosts() && !$currentUser->canUpdatePosts() && !$currentUser->canModeratePosts()) {
+                return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to access posts.</p>', 403);
+            }
+
             $ctrl = new PostController($this->app);
             return match ($path) {
                 '/admin/posts'             => $ctrl->index($request),
@@ -359,6 +363,10 @@ class Kernel
 
         // Module 3: Pages
         if (str_starts_with($path, '/admin/pages')) {
+            if (!$currentUser->canManagePages()) {
+                return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage pages.</p>', 403);
+            }
+
             $ctrl = new PageController($this->app);
             return match ($path) {
                 '/admin/pages'         => $ctrl->index($request),
@@ -377,6 +385,10 @@ class Kernel
 
         // Module 4: Taxonomies
         if (str_starts_with($path, '/admin/taxonomies')) {
+            if (!$currentUser->canManageTaxonomies()) {
+                return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage categories and tags.</p>', 403);
+            }
+
             $ctrl = new TaxonomyController($this->app);
             return match ($path) {
                 '/admin/taxonomies/categories' => $ctrl->categories($request),
@@ -389,6 +401,10 @@ class Kernel
 
         // Module 5: Media
         if (str_starts_with($path, '/admin/media')) {
+            if (!$currentUser->canUploadMedia()) {
+                return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to access media.</p>', 403);
+            }
+
             $ctrl = new MediaController($this->app);
             return match ($path) {
                 '/admin/media'              => $ctrl->index($request),
@@ -457,7 +473,7 @@ class Kernel
 
         // Module 8: Menus
         if (str_starts_with($path, '/admin/menus')) {
-            if (!$isAdmin) {
+            if (!$currentUser->canManageMenus()) {
                 return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage menus.</p>', 403);
             }
             $ctrl = new MenuController($this->app);
