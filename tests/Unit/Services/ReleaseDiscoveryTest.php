@@ -43,17 +43,19 @@ class ReleaseDiscoveryTest extends TestCase
 
     public function testCheckUsesFreshLocalCache(): void
     {
+        $currentVersion = defined('APP_VERSION') ? APP_VERSION : '1.0.0-beta';
+        $futureVersion = ((int)$currentVersion + 1) . '.0.0';
         $cachedPayload = [
             'checked_at'       => date('c'),
-            'current_version'  => '1.0.10',
+            'current_version'  => $currentVersion,
             'update_available' => true,
-            'latest_version'   => '1.0.11',
-            'tag_name'         => 'v1.0.11',
-            'release_name'     => 'Favorite CMS Universal v1.0.11',
+            'latest_version'   => $futureVersion,
+            'tag_name'         => 'v' . $futureVersion,
+            'release_name'     => 'Favorite CMS Universal v' . $futureVersion,
             'release_notes'    => 'Improvements to core updates',
             'published_at'     => date('c'),
-            'release_url'      => 'https://github.com/favoritecode/Favorite-CMS-Universal/releases/tag/v1.0.11',
-            'download_url'     => 'https://github.com/favoritecode/Favorite-CMS-Universal/releases/download/v1.0.11/Favorite-CMS-Universal.zip',
+            'release_url'      => 'https://github.com/favoritecode/Favorite-CMS-Universal/releases/tag/v' . $futureVersion,
+            'download_url'     => 'https://github.com/favoritecode/Favorite-CMS-Universal/releases/download/v' . $futureVersion . '/Favorite-CMS-Universal.zip',
             'package_name'     => 'Favorite-CMS-Universal.zip',
             'package_size'     => 1234567,
             'sha256'           => str_repeat('b', 64),
@@ -66,7 +68,7 @@ class ReleaseDiscoveryTest extends TestCase
         $result = $this->discovery->check(false);
 
         $this->assertTrue($result['cached']);
-        $this->assertEquals('1.0.11', $result['latest_version']);
+        $this->assertEquals($futureVersion, $result['latest_version']);
         $this->assertTrue($result['update_available']);
     }
 
@@ -81,4 +83,3 @@ class ReleaseDiscoveryTest extends TestCase
         $this->assertArrayHasKey('update_available', $result);
     }
 }
-

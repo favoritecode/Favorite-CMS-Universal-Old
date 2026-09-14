@@ -156,37 +156,85 @@ class UserController
             return Response::redirect('/admin/users');
         }
 
+        $currentId = (int)($_SESSION['auth_user_id'] ?? 0);
         $name     = trim((string)$request->post('name', ''));
         $email    = trim((string)$request->post('email', ''));
         $password = (string)$request->post('password', '');
         $roleId   = (int)$request->post('role_id', 0);
+        $status   = strtolower(trim((string)$request->post('status', '')));
 
         if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['flash_error'] = 'A valid email address is required.';
             return Response::redirect('/admin/users/edit?id=' . $id);
         }
 
-        $data = [
-            'name'       => $name !== '' ? $name : $user->username,
-            'email'      => $email,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ];
+        $db = $this->app->make(Database::class);
 
-        if ($password !== '') {
-            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
-        }
+        try {
+            $db->transaction(function() use ($db, $user, $id, $currentId, $name, $email, $password, $roleId, $status) {
+                try {
+                    $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                } catch (\Throwable) {
+                }
 
-        $user->update($data);
+                $isTargetSuperAdmin = $user->hasRole('super-admin');
+                $targetIsActive = $user->isActive();
+                $newRole = $roleId > 0 ? Role::find($roleId) : null;
+                $isChangingRole = ($newRole !== null && !$user->hasRole($newRole->slug));
 
-        if ($roleId > 0) {
-            $db = $this->app->make(Database::class);
-            $db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$id]);
-            $db->execute("INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (?, ?)", [$id, $roleId]);
-        }
+                // 1. Self-demotion check: Super Admin cannot demote themselves directly
+                if ($id === $currentId && $isTargetSuperAdmin && $isChangingRole && $newRole->slug !== 'super-admin') {
+                    throw new \DomainException('You cannot demote yourself. Another active Super Admin must be created or promoted before you can relinquish the Super Admin role.');
+                }
 
-        $status = strtolower(trim((string)$request->post('status', '')));
-        if (in_array($status, ['active', 'suspended', 'banned'], true) && $id !== (int)($_SESSION['auth_user_id'] ?? 0)) {
-            $user->update(['status' => $status]);
+                // 2. Last Super Admin demotion guard
+                if ($isTargetSuperAdmin && $targetIsActive && $isChangingRole && $newRole->slug !== 'super-admin') {
+                    if (User::getActiveSuperAdminCount($db, true) <= 1) {
+                        throw new \DomainException('Cannot demote the last remaining active Super Admin.');
+                    }
+                }
+
+                // 3. Last Super Admin deactivation / suspension / banning guard
+                if ($isTargetSuperAdmin && $targetIsActive && in_array($status, ['suspended', 'banned'], true)) {
+                    if ($id === $currentId) {
+                        throw new \DomainException('You cannot modify your own account status.');
+                    }
+                    if (User::getActiveSuperAdminCount($db, true) <= 1) {
+                        throw new \DomainException('Cannot suspend or ban the last remaining active Super Admin.');
+                    }
+                }
+
+                $data = [
+                    'name'       => $name !== '' ? $name : $user->username,
+                    'email'      => $email,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ];
+
+                if ($password !== '') {
+                    $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+                }
+
+                $user->update($data);
+
+                if ($roleId > 0) {
+                    $db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$id]);
+                    $db->execute("INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (?, ?)", [$id, $roleId]);
+
+                    if ($id === $currentId) {
+                        $_SESSION['auth_user_role'] = $newRole ? $newRole->slug : 'subscriber';
+                    }
+                }
+
+                if (in_array($status, ['active', 'suspended', 'banned'], true) && $id !== $currentId) {
+                    $user->update(['status' => $status]);
+                }
+            });
+        } catch (\DomainException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            return Response::redirect('/admin/users/edit?id=' . $id);
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'An error occurred while updating the user: ' . $e->getMessage();
+            return Response::redirect('/admin/users/edit?id=' . $id);
         }
 
         $_SESSION['flash_success'] = 'User updated successfully.';
@@ -220,10 +268,33 @@ class UserController
             return Response::redirect('/admin/users');
         }
 
-        $targetUser->update([
-            'status'     => $status,
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]);
+        $db = $this->app->make(Database::class);
+
+        try {
+            $db->transaction(function() use ($db, $targetUser, $status) {
+                try {
+                    $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                } catch (\Throwable) {
+                }
+
+                if ($targetUser->hasRole('super-admin') && $targetUser->isActive() && in_array($status, ['suspended', 'banned'], true)) {
+                    if (User::getActiveSuperAdminCount($db, true) <= 1) {
+                        throw new \DomainException('Cannot suspend or ban the last remaining active Super Admin.');
+                    }
+                }
+
+                $targetUser->update([
+                    'status'     => $status,
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+            });
+        } catch (\DomainException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            return Response::redirect('/admin/users');
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Failed to update user status: ' . $e->getMessage();
+            return Response::redirect('/admin/users');
+        }
 
         $statusLabel = match ($status) {
             'suspended' => 'suspended',
@@ -264,8 +335,30 @@ class UserController
         }
 
         $db = $this->app->make(Database::class);
-        $db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$id]);
-        $db->execute("INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (?, ?)", [$id, $roleId]);
+
+        try {
+            $db->transaction(function() use ($db, $targetUser, $id, $roleId, $role) {
+                try {
+                    $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                } catch (\Throwable) {
+                }
+
+                if ($targetUser->hasRole('super-admin') && $targetUser->isActive() && $role->slug !== 'super-admin') {
+                    if (User::getActiveSuperAdminCount($db, true) <= 1) {
+                        throw new \DomainException('Cannot demote the last remaining active Super Admin.');
+                    }
+                }
+
+                $db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$id]);
+                $db->execute("INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (?, ?)", [$id, $roleId]);
+            });
+        } catch (\DomainException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            return Response::redirect('/admin/users');
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Failed to change user role: ' . $e->getMessage();
+            return Response::redirect('/admin/users');
+        }
 
         $_SESSION['flash_success'] = "Role for \"{$targetUser->username}\" changed to {$role->name}.";
         return Response::redirect('/admin/users');
@@ -294,10 +387,11 @@ class UserController
             'primaryRole'     => $user->getPrimaryRoleName(),
             'avatarUrl'       => $user->getAvatarUrl(),
             'postCount'       => $user->getPostCount(),
-            'isEmailVerified' => $user->isEmailVerified(),
-            'pendingEmail'    => $pendingEmail,
-            'canSelfDelete'   => $user->canSelfDelete(),
-            'contentView'     => APP_ROOT . '/resources/views/admin/users/profile.php',
+            'isEmailVerified'        => $user->isEmailVerified(),
+            'pendingEmail'           => $pendingEmail,
+            'canSelfDelete'          => $user->canSelfDelete(),
+            'isEligibleForRecovery'  => $user->isEligibleForSuperAdminRecovery(),
+            'contentView'            => APP_ROOT . '/resources/views/admin/users/profile.php',
         ];
 
         extract($viewData, EXTR_SKIP);
@@ -450,7 +544,7 @@ class UserController
 
     public function delete(Request $request): Response
     {
-        $id = (int)$request->get('id', 0);
+        $id = (int)$request->get('id', (int)$request->post('id', 0));
         $currentId = (int)($_SESSION['auth_user_id'] ?? 0);
 
         if ($id === $currentId) {
@@ -465,8 +559,26 @@ class UserController
 
         $user = User::find($id);
         if ($user) {
-            $user->deleteAccount($currentId);
-            $_SESSION['flash_success'] = 'User deleted.';
+            $db = $this->app->make(Database::class);
+            try {
+                $db->transaction(function() use ($db, $user, $currentId) {
+                    try {
+                        $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                    } catch (\Throwable) {
+                    }
+
+                    if ($user->hasRole('super-admin') && $user->isActive() && User::getActiveSuperAdminCount($db, true) <= 1) {
+                        throw new \DomainException('Cannot delete the last remaining active Super Admin.');
+                    }
+
+                    $user->deleteAccount($currentId);
+                });
+                $_SESSION['flash_success'] = 'User deleted.';
+            } catch (\DomainException $e) {
+                $_SESSION['flash_error'] = $e->getMessage();
+            } catch (\Throwable $e) {
+                $_SESSION['flash_error'] = 'Failed to delete user: ' . $e->getMessage();
+            }
         }
 
         return Response::redirect('/admin/users');
@@ -524,7 +636,18 @@ class UserController
         $fallbackAdminId = $adminRow ? (int)$adminRow->id : (int)$user->id;
 
         try {
-            $user->deleteAccount($fallbackAdminId);
+            $db->transaction(function() use ($db, $user, $fallbackAdminId) {
+                try {
+                    $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                } catch (\Throwable) {
+                }
+
+                if ($user->hasRole('super-admin') && User::getActiveSuperAdminCount($db, true) <= 1) {
+                    throw new \DomainException('Cannot delete the last remaining active Super Admin account.');
+                }
+
+                $user->deleteAccount($fallbackAdminId);
+            });
 
             // Destroy session and log out
             $_SESSION = [];
@@ -534,6 +657,9 @@ class UserController
             session_start();
             $_SESSION['flash_success'] = 'Your account has been permanently deleted.';
             return Response::redirect('/');
+        } catch (\DomainException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            return Response::redirect('/admin/users/profile');
         } catch (\Throwable $e) {
             $_SESSION['flash_error'] = 'Account deletion failed: ' . $e->getMessage();
             return Response::redirect('/admin/users/profile');
@@ -577,29 +703,52 @@ class UserController
 
         $count = 0;
         $now = date('Y-m-d H:i:s');
-        $isSuperAdmin = $currentUser->hasRole('super-admin');
+        $db = $this->app->make(Database::class);
 
-        foreach ($ids as $id) {
-            // Guard: Cannot modify self
-            if ($id === $currentId) {
-                continue;
-            }
+        try {
+            $db->transaction(function() use ($db, $ids, $currentId, $currentUser, $action, $targetStatus, $now, &$count) {
+                try {
+                    $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+                } catch (\Throwable) {
+                }
 
-            $targetUser = User::find($id);
-            if (!$targetUser) {
-                continue;
-            }
+                $isSuperAdmin = $currentUser->hasRole('super-admin');
+                $activeSuperAdminCount = User::getActiveSuperAdminCount($db, true);
 
-            // Guard: Cannot suspend or ban a super-admin unless acting user is super-admin
-            if ($targetUser->hasRole('super-admin') && !$isSuperAdmin) {
-                continue;
-            }
+                foreach ($ids as $id) {
+                    // Guard: Cannot modify self
+                    if ($id === $currentId) {
+                        continue;
+                    }
 
-            $targetUser->update([
-                'status'     => $targetStatus,
-                'updated_at' => $now,
-            ]);
-            $count++;
+                    $targetUser = User::find($id);
+                    if (!$targetUser) {
+                        continue;
+                    }
+
+                    // Guard: Cannot suspend or ban a super-admin unless acting user is super-admin
+                    if ($targetUser->hasRole('super-admin') && !$isSuperAdmin) {
+                        continue;
+                    }
+
+                    // Guard: Bulk suspend/ban cannot reduce active super admin count to 0
+                    if (in_array($targetStatus, ['suspended', 'banned'], true) && $targetUser->hasRole('super-admin') && $targetUser->isActive()) {
+                        if ($activeSuperAdminCount <= 1) {
+                            continue; // Skip this user so at least one active Super Admin remains
+                        }
+                        $activeSuperAdminCount--;
+                    }
+
+                    $targetUser->update([
+                        'status'     => $targetStatus,
+                        'updated_at' => $now,
+                    ]);
+                    $count++;
+                }
+            });
+        } catch (\Throwable $e) {
+            $_SESSION['flash_error'] = 'Bulk action failed: ' . $e->getMessage();
+            return Response::redirect('/admin/users');
         }
 
         if ($count > 0) {
@@ -615,6 +764,56 @@ class UserController
         }
 
         return Response::redirect('/admin/users');
+    }
+
+    public function recoverSuperAdmin(Request $request): Response
+    {
+        $id = (int)($_SESSION['auth_user_id'] ?? 0);
+        if ($id <= 0) {
+            return Response::redirect('/admin/login');
+        }
+
+        $user = User::find($id);
+        if (!$user) {
+            return Response::redirect('/admin/login');
+        }
+
+        // Verify CSRF Token
+        $token = (string)$request->post('_token', '');
+        $storedToken = (string)($_SESSION['_token'] ?? '');
+        if ($storedToken === '' || !hash_equals($storedToken, $token)) {
+            $_SESSION['flash_error'] = 'Security verification failed (invalid CSRF token). Please try again.';
+            return Response::redirect('/admin/users/profile');
+        }
+
+        // Verify eligibility first
+        if (!$user->isEligibleForSuperAdminRecovery()) {
+            $_SESSION['flash_error'] = 'Your account is not eligible for Super Admin emergency recovery.';
+            return Response::redirect('/admin/users/profile');
+        }
+
+        // Rate limiting: max 5 attempts per 15 minutes by IP and User
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $rateKey = 'recover_sa_' . $ip . '_' . $user->id;
+        $limiter = new \FavoriteCMS\Services\AuthRateLimiter();
+        if (!$limiter->allow($rateKey, 5, 900)) {
+            $_SESSION['flash_error'] = 'Too many recovery attempts. Please wait 15 minutes before trying again.';
+            return Response::redirect('/admin/users/profile');
+        }
+
+        $password = (string)$request->post('password', '');
+        if ($password === '') {
+            $_SESSION['flash_error'] = 'Password is required to confirm emergency recovery.';
+            return Response::redirect('/admin/users/profile');
+        }
+
+        if (!$user->recoverSuperAdmin($password)) {
+            $_SESSION['flash_error'] = 'Authentication failed. Please verify your current password.';
+            return Response::redirect('/admin/users/profile');
+        }
+
+        $_SESSION['flash_success'] = 'Super Admin role successfully restored! Full administrator capabilities are now active.';
+        return Response::redirect('/admin/users/profile');
     }
 }
 

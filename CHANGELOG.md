@@ -3,6 +3,16 @@
 All notable changes to **Favorite CMS Universal** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-09-15
+
+### Fixed & Security
+- **Super Admin Role Integrity & Safe Live-Site Recovery**:
+  - Enforced zero Super Admin system invariant: prevented number of active Super Admin accounts from becoming zero through role demotion, self-demotion, deactivation, suspension, banning, or account deletion.
+  - Implemented row-level locking (`SELECT id FROM roles WHERE slug = 'super-admin' FOR UPDATE`) across all user status, role, and deletion transactions to ensure strict concurrency protection.
+  - Fixed runtime role resolution mismatch where database Super Admin failed to resolve capabilities due to stale session role values or unnormalized role slugs.
+  - Hardened `hasRole()`, `isSuperAdmin()`, and `hasPermission()` with full slug normalization and bypass checks.
+  - Added single-use, authenticated, rate-limited, password-verified Emergency Super Admin Recovery flow for the verified legitimate site administrator (User ID 1 matching site settings).
+
 ## [1.0.0-beta] - 2026-09-04
 
 ### Added

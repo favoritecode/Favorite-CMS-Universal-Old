@@ -16,8 +16,9 @@ $registerHref = $url('/register') . ($redirect !== null ? '?redirect=' . rawurle
 ?>
 <section class="fc-auth__card" aria-labelledby="auth-title">
     <header>
+        <p class="fc-auth__eyebrow">Welcome back</p>
         <h1 class="fc-auth__title" id="auth-title">Log in</h1>
-        <p class="fc-auth__subtitle">Welcome back to <?php echo $e($siteName); ?>.</p>
+        <p class="fc-auth__subtitle">Enter your details to continue to your account.</p>
     </header>
 
     <?php if ($error !== ''): ?>
@@ -35,14 +36,14 @@ $registerHref = $url('/register') . ($redirect !== null ? '?redirect=' . rawurle
         <?php echo $field(['id' => 'login', 'label' => 'Username or email', 'value' => $oldLogin, 'required' => true, 'autocomplete' => 'username', 'attrs' => ['autofocus' => $oldLogin === '', 'autocapitalize' => 'none', 'spellcheck' => 'false', 'data-error' => 'Enter your username or email address.']]); ?>
         <?php echo $field(['id' => 'password', 'label' => 'Password', 'type' => 'password', 'required' => true, 'autocomplete' => 'current-password', 'toggle' => true, 'attrs' => ['autofocus' => $oldLogin !== '', 'data-error' => 'Enter your password.']]); ?>
 
+        <div class="fc-auth__form-link"><a href="<?php echo $e($url('/forgot-password')); ?>">Forgot password?</a></div>
         <button type="submit" class="fc-btn fc-btn--primary fc-btn--block" data-busy-label="Logging in...">Log in</button>
     </form>
 
     <div class="fc-auth__alt">
-        <p><a href="<?php echo $e($url('/forgot-password')); ?>">Forgot password?</a></p>
         <?php if ($registrationEnabled): ?>
             <p>New here? <a href="<?php echo $e($registerHref); ?>">Create an account</a></p>
         <?php endif; ?>
-        <p><a href="<?php echo $e($url('/resend-verification')); ?>">Resend the email verification link</a></p>
+        <p class="fc-auth__help">Waiting for your verification email? <a href="<?php echo $e($url('/resend-verification')); ?>">Resend link</a></p>
     </div>
 </section>

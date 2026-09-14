@@ -13,11 +13,12 @@ try {
 }
 
 try {
-    $user = !empty($_SESSION['auth_user_id']) && class_exists(\FavoriteCMS\Models\User::class) ? \FavoriteCMS\Models\User::find((int)$_SESSION['auth_user_id']) : null;
+    $currentAdminUser = function_exists('current_user') ? current_user() : (!empty($_SESSION['auth_user_id']) && class_exists(\FavoriteCMS\Models\User::class) ? \FavoriteCMS\Models\User::find((int)$_SESSION['auth_user_id']) : null);
 } catch (\Throwable $e) {
-    $user = null;
+    $currentAdminUser = null;
 }
-$username = $user ? ($user->name ?? $user->username) : 'Admin';
+$user = $user ?? $currentAdminUser;
+$username = $currentAdminUser ? ($currentAdminUser->name ?? $currentAdminUser->username) : 'Admin';
 
 $flashSuccess = $_SESSION['flash_success'] ?? null;
 $flashError = $_SESSION['flash_error'] ?? null;
@@ -618,7 +619,7 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                     <a href="/admin" class="wp-menu-link">📊 Dashboard</a>
                 </li>
                 <?php
-                $isAdmin = $user && ($user->hasRole('admin') || $user->hasRole('super-admin'));
+                $isAdmin = $currentAdminUser && ($currentAdminUser->hasRole('admin') || $currentAdminUser->hasRole('super-admin') || $currentAdminUser->isSuperAdmin());
                 ?>
                 <?php if ($isAdmin): ?>
                     <li class="wp-menu-item <?php echo $activeMenu === 'updates' ? 'active' : ''; ?>">
@@ -626,9 +627,9 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                     </li>
                 <?php endif; ?>
                 <?php
-                $canModerate = $user && $user->canModeratePosts();
-                $canModerateComments = $user && $user->canModerateComments();
-                $canManageUsers = $user && $user->canManageUsers();
+                $canModerate = $currentAdminUser && $currentAdminUser->canModeratePosts();
+                $canModerateComments = $currentAdminUser && $currentAdminUser->canModerateComments();
+                $canManageUsers = $currentAdminUser && $currentAdminUser->canManageUsers();
                 try {
                     $pendingCount = class_exists(\FavoriteCMS\Models\Post::class) ? (int)(\FavoriteCMS\Models\Post::countByStatus()['pending'] ?? 0) : 0;
                 } catch (\Throwable $e) {

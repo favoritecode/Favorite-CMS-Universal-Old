@@ -35,12 +35,16 @@
                 </tr>
             </thead>
             <tbody>
+                <?php
+                $activeSuperAdminCount = \FavoriteCMS\Models\User::getActiveSuperAdminCount();
+                ?>
                 <?php foreach ($users as $u): ?>
                     <?php
                     $userRoles = $u->getRoles();
                     $primaryRole = !empty($userRoles) ? $userRoles[0] : null;
                     $roleName = $primaryRole ? $primaryRole->name : 'Subscriber';
                     $isSelf = ((int)$u->id === (int)($_SESSION['auth_user_id'] ?? 0));
+                    $isSoleActiveSuperAdmin = $u->hasRole('super-admin') && $u->isActive() && ($activeSuperAdminCount <= 1);
                     $postCount = $u->getPostCount();
                     $userStatus = $u->status ?? 'active';
 
@@ -53,10 +57,12 @@
                     ?>
                     <tr>
                         <td style="text-align: center;">
-                            <?php if (!$isSelf): ?>
-                                <input type="checkbox" name="ids[]" value="<?php echo (int)$u->id; ?>" class="bulk-cb">
-                            <?php else: ?>
+                            <?php if ($isSelf): ?>
                                 <input type="checkbox" disabled title="You cannot bulk-edit your own account">
+                            <?php elseif ($isSoleActiveSuperAdmin): ?>
+                                <input type="checkbox" disabled title="Protected sole Super Admin account">
+                            <?php else: ?>
+                                <input type="checkbox" name="ids[]" value="<?php echo (int)$u->id; ?>" class="bulk-cb">
                             <?php endif; ?>
                         </td>
                         <td>
@@ -70,15 +76,19 @@
                             <?php endif; ?>
                             <div class="row-actions">
                                 <a href="/admin/users/edit?id=<?php echo (int)$u->id; ?>">Edit Profile</a>
-                                <?php if (!$isSelf): ?>
+                                <?php if (!$isSelf && !$isSoleActiveSuperAdmin): ?>
                                     | <a href="/admin/users/delete?id=<?php echo (int)$u->id; ?>" onclick="return confirm('Permanently delete user &quot;<?php echo htmlspecialchars($u->username); ?>&quot;?');" style="color: var(--wp-danger);">Delete</a>
+                                <?php elseif (!$isSelf && $isSoleActiveSuperAdmin): ?>
+                                    | <span style="color: var(--wp-text-muted); font-size: 11.5px;" title="Sole active Super Admin cannot be deleted">Protected</span>
                                 <?php endif; ?>
                             </div>
                         </td>
                         <td><?php echo htmlspecialchars($u->name ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
                         <td><a href="mailto:<?php echo htmlspecialchars($u->email, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($u->email, ENT_QUOTES, 'UTF-8'); ?></a></td>
                         <td>
-                            <?php if (!$isSelf && !empty($roles)): ?>
+                            <?php if ($isSoleActiveSuperAdmin): ?>
+                                <span style="font-weight: 600; color: #1e40af; background: #dbeafe; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Super Admin (Protected)</span>
+                            <?php elseif (!$isSelf && !empty($roles)): ?>
                                 <form method="POST" action="/admin/users/role" style="display: inline-block;">
                                     <input type="hidden" name="_token" value="<?php echo htmlspecialchars($_SESSION['_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="id" value="<?php echo (int)$u->id; ?>">
@@ -117,27 +127,31 @@
                         </td>
                         <td>
                             <?php if (!$isSelf): ?>
-                                <div style="display: flex; gap: 6px; align-items: center;">
-                                    <?php if ($userStatus === 'active'): ?>
-                                        <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=suspended" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b45309;" title="Suspend user">
-                                            Suspend
-                                        </a>
-                                        <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=banned" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b91c1c;" title="Ban user" onclick="return confirm('Ban user &quot;<?php echo htmlspecialchars($u->username); ?>&quot;? They will not be able to log in.');">
-                                            Ban
-                                        </a>
-                                    <?php elseif ($userStatus === 'suspended'): ?>
-                                        <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=active" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #15803d; font-weight: 600;" title="Reactivate user">
-                                            Activate
-                                        </a>
-                                        <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=banned" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b91c1c;" title="Ban user">
-                                            Ban
-                                        </a>
-                                    <?php elseif ($userStatus === 'banned'): ?>
-                                        <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=active" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #15803d; font-weight: 600;" title="Restore user">
-                                            Restore
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
+                                <?php if ($isSoleActiveSuperAdmin): ?>
+                                    <span style="color: #0369a1; font-size: 11px; background: #e0f2fe; padding: 2px 6px; border-radius: 3px; font-weight: 600;">Protected Super Admin</span>
+                                <?php else: ?>
+                                    <div style="display: flex; gap: 6px; align-items: center;">
+                                        <?php if ($userStatus === 'active'): ?>
+                                            <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=suspended" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b45309;" title="Suspend user">
+                                                Suspend
+                                            </a>
+                                            <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=banned" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b91c1c;" title="Ban user" onclick="return confirm('Ban user &quot;<?php echo htmlspecialchars($u->username); ?>&quot;? They will not be able to log in.');">
+                                                Ban
+                                            </a>
+                                        <?php elseif ($userStatus === 'suspended'): ?>
+                                            <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=active" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #15803d; font-weight: 600;" title="Reactivate user">
+                                                Activate
+                                            </a>
+                                            <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=banned" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #b91c1c;" title="Ban user">
+                                                Ban
+                                            </a>
+                                        <?php elseif ($userStatus === 'banned'): ?>
+                                            <a href="/admin/users/status?id=<?php echo (int)$u->id; ?>&status=active" class="btn btn-secondary" style="padding: 2px 7px; font-size: 11px; color: #15803d; font-weight: 600;" title="Restore user">
+                                                Restore
+                                            </a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span style="color: var(--wp-text-muted); font-size: 12px;">Active Account</span>
                             <?php endif; ?>

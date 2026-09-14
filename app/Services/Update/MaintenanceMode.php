@@ -128,8 +128,16 @@ class MaintenanceMode
         }
 
         // 3. Authenticated admins updating or managing the system
-        if (!empty($_SESSION['auth_user_id']) && !empty($_SESSION['auth_user_role'])) {
-            if (in_array($_SESSION['auth_user_role'], ['administrator', 'super_admin'], true)) {
+        if (!empty($_SESSION['auth_user_id'])) {
+            $role = (string)($_SESSION['auth_user_role'] ?? '');
+            if (empty($role) && class_exists(\FavoriteCMS\Models\User::class)) {
+                $u = \FavoriteCMS\Models\User::find((int)$_SESSION['auth_user_id']);
+                if ($u) {
+                    $role = $u->getPrimaryRoleSlug();
+                    $_SESSION['auth_user_role'] = $role;
+                }
+            }
+            if (in_array($role, ['administrator', 'admin', 'super-admin', 'super_admin'], true)) {
                 $path = $request->path();
                 // Allow admin updates routes and tools
                 if (str_starts_with($path, '/admin/updates') || str_starts_with($path, '/admin/tools')) {

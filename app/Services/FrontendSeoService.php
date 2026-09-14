@@ -19,8 +19,8 @@ class FrontendSeoService
         $siteDesc  = (string)Setting::get('general', 'site_description', '');
         $sep       = (string)Setting::get('seo', 'title_separator', '—');
 
-        $post = $context['post'] ?? null;
-        $page = $context['page'] ?? null;
+        $post = ($context['post'] ?? null) instanceof Post ? $context['post'] : null;
+        $page = ($context['page'] ?? null) instanceof Page ? $context['page'] : null;
         $isHome = !empty($context['isHome']);
 
         $seoMeta = null;

@@ -291,6 +291,9 @@ class Kernel
             return Response::redirect('/admin/login');
         }
 
+        // Always synchronize session role with database authoritative state
+        $_SESSION['auth_user_role'] = $currentUser->getPrimaryRoleSlug();
+
         // Enforce suspended restrictions: suspended users can view profile/settings and logout
         if ($currentUser->isSuspended()) {
             $allowedForSuspended = [
@@ -427,6 +430,9 @@ class Kernel
             if ($path === '/admin/users/profile/delete-account' && $method === 'POST') {
                 return $ctrl->deleteOwnAccount($request);
             }
+            if ($path === '/admin/users/profile/recover-super-admin' && $method === 'POST') {
+                return $ctrl->recoverSuperAdmin($request);
+            }
 
             if (!$currentUser->canManageUsers()) {
                 return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage users.</p>', 403);
@@ -447,7 +453,7 @@ class Kernel
         }
 
         // Admin-only modules protection (Themes, Plugins, Widgets, Customize, Settings, Tools)
-        $isAdmin = $currentUser->hasRole('admin') || $currentUser->hasRole('super-admin');
+        $isAdmin = $currentUser->hasRole('admin') || $currentUser->hasRole('super-admin') || $currentUser->isSuperAdmin();
 
         // Module 8: Menus
         if (str_starts_with($path, '/admin/menus')) {
@@ -719,6 +725,11 @@ class Kernel
             $_SESSION['auth_user_id']    = $user->id;
             $_SESSION['auth_user_name']  = $user->name ?? $user->username ?? 'User';
             $_SESSION['auth_user_email'] = $user->email;
+
+            $userModel = User::find((int)$user->id);
+            if ($userModel) {
+                $_SESSION['auth_user_role'] = $userModel->getPrimaryRoleSlug();
+            }
 
             $db->execute("UPDATE `users` SET `last_login_at` = ? WHERE `id` = ?", [date('Y-m-d H:i:s'), $user->id]);
 

@@ -369,6 +369,8 @@ if (!function_exists('current_user')) {
             );
             return null;
         }
+        // Always synchronize session role with authoritative database role
+        $_SESSION['auth_user_role'] = $user->getPrimaryRoleSlug();
         return $user;
     }
 }

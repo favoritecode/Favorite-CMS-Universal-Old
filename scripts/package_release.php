@@ -83,6 +83,8 @@ $excludePatterns = [
     '#\.(zip|sql|bak|backup|tmp|temp|log|map)$#i',
     '/node_modules\b/',
     '/dfre\b/',
+    '/claude\b/i',
+    '/codex\b/i',
 ];
 
 // 3. Staging directory setup
@@ -171,7 +173,7 @@ foreach ($filesToCopy as $file) {
 }
 
 // 8b. Add authoritative release metadata manifest
-$appVersion = '1.0.10';
+$appVersion = '1.0.11';
 $bootstrapPath = $sourceDir . '/bootstrap.php';
 if (file_exists($bootstrapPath) && preg_match("/define\(\s*['\"]APP_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", (string)file_get_contents($bootstrapPath), $m)) {
     $appVersion = $m[1];
@@ -265,7 +267,7 @@ for ($i = 0; $i < $totalEntries; $i++) {
     $stat = $readZip->statIndex($i);
     $name = $stat['name'];
 
-    if (!str_starts_with($name, $rootPrefix . '/') || preg_match('#(?:^|/)(?:\.git|\.github|tests|phpunit|backups|node_modules)(?:/|$)|(?:^|/)\.env(?:\.|$)|\.(?:sql|zip|bak|log|tmp)$#i', $name)
+    if (!str_starts_with($name, $rootPrefix . '/') || preg_match('#(?:^|/)(?:\.git|\.github|tests|phpunit|backups|node_modules|claude|codex)(?:/|$)|(?:^|/)\.env(?:\.|$)|\.(?:sql|zip|bak|log|tmp)$#i', $name)
         || preg_match('#^' . preg_quote($rootPrefix, '#') . '/(?:public/)?plugins/[^/]+#', $name)
         || preg_match('#^' . preg_quote($rootPrefix, '#') . '/(?:public/)?themes/(?!default(?:/|$))[^/]+#', $name)
         || str_contains($name, '..')) {

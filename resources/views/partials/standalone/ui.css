@@ -179,6 +179,51 @@ code { font-family: var(--fc-font-mono); font-size: 0.85em; background: var(--fc
 .fc-auth__footer a:hover { color: var(--fc-text); text-decoration: underline; }
 .fc-auth__actions { display: flex; flex-wrap: wrap; gap: var(--fc-space-3); }
 .fc-auth__actions .fc-btn { flex: 1 1 auto; white-space: nowrap; }
+
+/* Account pages only: the installer keeps its existing standalone layout. */
+.fc-auth__inner--account { max-width: 980px; gap: 24px; }
+.fc-auth__inner--account .fc-auth__header { justify-content: space-between; align-items: center; gap: 20px; padding: 0 4px; }
+.fc-auth__header-label { color: var(--fc-muted); font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.fc-auth__frame { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); overflow: hidden; background: #fff; border: 1px solid #dce3ee; border-radius: 24px; box-shadow: 0 24px 70px -30px rgba(24, 39, 75, .25); }
+.fc-auth__intro { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 48px 40px 32px; color: #cbd7f0; background: radial-gradient(ellipse at 0 100%, #324e89, transparent 75%), #14254a; }
+.fc-auth__intro h2 { margin: 18px 0; color: #fff; font-size: clamp(2rem, 3.5vw, 2.75rem); font-weight: 600; line-height: 1.15; letter-spacing: -.045em; }
+.fc-auth__intro-copy > p { max-width: 28ch; font-size: .9375rem; line-height: 1.8; }
+.fc-auth__eyebrow { margin-bottom: 12px; color: #496292; font-size: .6875rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.fc-auth__intro .fc-auth__eyebrow { color: #a9c2f9; }
+.fc-auth__intro-note { position: relative; font-size: .75rem; color: #bdcdec; line-height: 1.7; }
+.fc-auth__art { position: relative; height: 190px; margin: 32px 0; }
+.fc-auth__art-orbit { position: absolute; width: 210px; height: 210px; left: -35px; top: -15px; border: 1px solid #637cad; border-radius: 50%; box-shadow: 0 0 0 25px rgba(130, 161, 219, .06), 0 0 0 50px rgba(130, 161, 219, .035); }
+.fc-auth__art-card { position: absolute; left: 32px; top: 36px; width: 194px; height: 130px; padding: 26px; display: grid; align-content: center; gap: 13px; background: #f4f7ff; border: 1px solid #fff; border-radius: 16px; transform: rotate(-8deg); box-shadow: 0 20px 40px rgba(0, 0, 0, .16); }
+.fc-auth__art-card span { display: block; height: 7px; border-radius: 8px; background: #d6e0f3; }
+.fc-auth__art-card span:first-child { width: 34px; height: 24px; margin-bottom: 4px; background: #6688d4; border-radius: 7px; }
+.fc-auth__art-card span:last-child { width: 65%; }
+.fc-auth__art-dot { position: absolute; left: 207px; top: 16px; width: 22px; height: 22px; border: 5px solid #89a9ed; border-radius: 50%; background: #243d6c; }
+.fc-auth__frame .fc-auth__card { min-width: 0; min-height: 530px; align-content: center; gap: 28px; border: 0; border-radius: 0; box-shadow: none; padding: 44px 48px; }
+.fc-auth__frame .fc-auth__title { font-size: clamp(1.75rem, 2.5vw, 2rem); letter-spacing: -.035em; font-weight: 650; }
+.fc-auth__frame .fc-auth__subtitle { margin-top: 10px; line-height: 1.7; }
+.fc-auth__frame .fc-form { gap: 18px; }
+.fc-auth__frame .fc-input { min-height: 48px; border-radius: 9px; background: #fbfcfe; font-size: 1rem; }
+.fc-auth__frame .fc-input:focus { background: #fff; }
+.fc-auth__frame .fc-btn { min-height: 48px; border-radius: 9px; }
+.fc-auth__frame .fc-btn--primary { box-shadow: 0 3px 8px rgba(48, 86, 211, .16); }
+.fc-auth__form-link { text-align: right; margin-top: -6px; font-size: .8125rem; }
+.fc-auth__form-link a, .fc-auth__alt a { font-weight: 600; text-decoration: none; }
+.fc-auth__form-link a:hover, .fc-auth__alt a:hover { text-decoration: underline; }
+.fc-auth__frame .fc-auth__alt { padding-top: 22px; gap: 14px; }
+.fc-auth__help { font-size: .75rem; line-height: 1.7; }
+.fc-auth__frame .fc-alert { font-size: .875rem; }
+.fc-auth__frame .fc-rules { margin-top: -6px; }
+@media (max-width: 760px) {
+    .fc-auth__inner--account { max-width: 500px; }
+    .fc-auth__frame { grid-template-columns: minmax(0, 1fr); border-radius: 18px; }
+    .fc-auth__intro { display: none; }
+    .fc-auth__frame .fc-auth__card { min-height: 0; padding: 32px 28px; }
+    .fc-auth__header-label { display: none; }
+    .fc-auth__inner--account .fc-auth__header { justify-content: center; }
+}
+@media (max-width: 380px) {
+    .fc-auth__frame .fc-auth__card { padding: 28px 20px; }
+}
 .fc-status-icon { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700; }
 .fc-status-icon--error { background: var(--fc-danger-soft); color: var(--fc-danger); }
 .fc-status-icon--success { background: var(--fc-success-soft); color: var(--fc-success); }

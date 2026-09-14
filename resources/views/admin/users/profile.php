@@ -23,6 +23,34 @@ $token = $_SESSION['_token'] ?? '';
     </div>
 </div>
 
+<?php if (!empty($isEligibleForRecovery)): ?>
+    <div class="card" style="margin-bottom: 24px; border: 2px solid #eab308; background: #fffbeb; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="card-header" style="background: #fef08a; border-bottom: 1px solid #fde047; padding: 12px 16px;">
+            <h5 style="color: #854d0e; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <span>🛡️</span> Emergency Super Admin Role Recovery
+            </h5>
+        </div>
+        <div class="card-body" style="padding: 16px;">
+            <p style="font-size: 13.5px; color: #713f12; margin-bottom: 12px; line-height: 1.5;">
+                <strong>Notice:</strong> No active Super Admin accounts currently exist on this site. As the verified primary site administrator (User ID 1 matching site settings), you are eligible to restore your Super Admin privileges.
+            </p>
+            <p style="font-size: 12.5px; color: #854d0e; margin-bottom: 16px;">
+                For security verification, enter your current account password below. Once restored, this emergency recovery option will automatically close.
+            </p>
+            <form method="POST" action="/admin/users/profile/recover-super-admin" style="max-width: 480px;">
+                <input type="hidden" name="_token" value="<?php echo htmlspecialchars($token, ENT_QUOTES, 'UTF-8'); ?>">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="recovery_password" style="font-weight: 600; font-size: 12.5px; color: #713f12;">Confirm Your Account Password *</label>
+                    <input type="password" id="recovery_password" name="password" class="form-control" required placeholder="Enter your current password" autocomplete="current-password" style="background: #fff;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="background: #ca8a04; border-color: #a16207; color: #fff; font-weight: 600; padding: 8px 18px;">
+                    Restore Super Admin Role
+                </button>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if ($user->isSuspended()): ?>
     <div class="alert alert-warning" style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px;">
         <span style="font-size: 20px; line-height: 1;">⚠️</span>

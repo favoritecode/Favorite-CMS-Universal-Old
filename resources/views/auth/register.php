@@ -16,6 +16,7 @@ $disabled = !$registrationEnabled;
 ?>
 <section class="fc-auth__card" aria-labelledby="auth-title">
     <header>
+        <p class="fc-auth__eyebrow">Get started</p>
         <h1 class="fc-auth__title" id="auth-title">Create your account</h1>
         <p class="fc-auth__subtitle">Join <?php echo $e($siteName); ?> to comment and take part.</p>
     </header>

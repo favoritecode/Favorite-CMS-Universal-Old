@@ -74,6 +74,11 @@ class Response
         return $this->status;
     }
 
+    public function isRedirect(): bool
+    {
+        return in_array($this->status, [301, 302, 303, 307, 308], true);
+    }
+
     public function getHeaders(): array
     {
         return $this->headers;

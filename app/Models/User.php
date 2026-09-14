@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace FavoriteCMS\Models;
 
+use FavoriteCMS\Core\Database;
+use FavoriteCMS\Core\Container;
+
 class User extends BaseModel
 {
     protected static string $table = 'users';
@@ -46,6 +49,31 @@ class User extends BaseModel
         return $array;
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super-admin');
+    }
+
+    public static function getActiveSuperAdminCount(?Database $db = null, bool $forUpdate = false): int
+    {
+        $db = $db ?? Container::getInstance()->get(Database::class);
+        if ($forUpdate) {
+            try {
+                $db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+            } catch (\Throwable) {
+                // Ignore if DB driver does not support FOR UPDATE
+            }
+        }
+        $row = $db->selectOne(
+            "SELECT COUNT(DISTINCT u.`id`) as cnt
+             FROM `users` u
+             JOIN `user_roles` ur ON u.`id` = ur.`user_id`
+             JOIN `roles` r ON ur.`role_id` = r.`id`
+             WHERE (r.`slug` IN ('super-admin', 'super_admin') OR r.`name` = 'Super Admin') AND u.`status` = 'active'"
+        );
+        return (int)($row->cnt ?? 0);
+    }
+
     public function getRoles(): array
     {
         $sql = "SELECT r.* FROM roles r JOIN user_roles ur ON r.id = ur.role_id WHERE ur.user_id = ?";
@@ -54,9 +82,37 @@ class User extends BaseModel
 
     public function hasRole(string $roleSlug): bool
     {
+        $target = strtolower(trim($roleSlug));
+        $cleanTarget = str_replace(['_', ' '], '-', $target);
+        $compactTarget = str_replace(['_', ' ', '-'], '', $target);
+
         $roles = $this->getRoles();
         foreach ($roles as $role) {
-            if ($role->slug === $roleSlug) {
+            $slug = strtolower(trim((string)($role->slug ?? '')));
+            $cleanSlug = str_replace(['_', ' '], '-', $slug);
+            $compactSlug = str_replace(['_', ' ', '-'], '', $slug);
+
+            if ($slug === $target || $cleanSlug === $cleanTarget || $compactSlug === $compactTarget) {
+                return true;
+            }
+
+            $name = strtolower(trim((string)($role->name ?? '')));
+            $cleanName = str_replace(['_', ' '], '-', $name);
+            $compactName = str_replace(['_', ' ', '-'], '', $name);
+            if ($name === $target || $cleanName === $cleanTarget || $compactName === $compactTarget) {
+                return true;
+            }
+
+            // Normalization for administrator / admin
+            if (($cleanTarget === 'administrator' || $compactTarget === 'administrator') && ($cleanSlug === 'admin' || $cleanSlug === 'administrator')) {
+                return true;
+            }
+            if (($cleanTarget === 'admin' || $compactTarget === 'admin') && ($cleanSlug === 'admin' || $cleanSlug === 'administrator')) {
+                return true;
+            }
+
+            // Normalization for super-admin / superadmin / super_admin
+            if (($cleanTarget === 'super-admin' || $compactTarget === 'superadmin') && ($cleanSlug === 'super-admin' || $compactSlug === 'superadmin')) {
                 return true;
             }
         }
@@ -74,7 +130,7 @@ class User extends BaseModel
 
     public function hasPermission(string $permissionSlug): bool
     {
-        if ($this->hasRole('super-admin')) {
+        if ($this->hasRole('super-admin') || $this->isSuperAdmin()) {
             return true;
         }
 
@@ -150,6 +206,13 @@ class User extends BaseModel
             return false;
         }
 
+        // Prevent deleting the last remaining active Super Admin
+        if ($this->hasRole('super-admin')) {
+            if (static::getActiveSuperAdminCount($this->db) <= 1) {
+                return false;
+            }
+        }
+
         // Prevent deleting the last remaining active site administrator
         if ($this->hasRole('super-admin') || $this->hasRole('admin')) {
             $adminCount = $this->db->selectOne(
@@ -168,45 +231,165 @@ class User extends BaseModel
 
     public function deleteAccount(int $fallbackAdminId): void
     {
-        if (!$this->canSelfDelete()) {
-            throw new \RuntimeException('This account is not eligible for self-deletion.');
+        $action = function() use ($fallbackAdminId) {
+            // Lock roles row and enforce the invariant that at least one Super Admin must remain
+            if ($this->hasRole('super-admin') && static::getActiveSuperAdminCount($this->db, true) <= 1) {
+                throw new \RuntimeException('Cannot delete the last remaining active Super Admin account.');
+            }
+
+            if (!$this->canSelfDelete()) {
+                throw new \RuntimeException('This account is not eligible for self-deletion.');
+            }
+
+            // 1. Delete local avatar file if present
+            if (!empty($this->avatar)) {
+                $avatarService = new \FavoriteCMS\Services\AvatarService();
+                $avatarService->deleteLocalAvatarFile($this->avatar);
+            }
+
+            // 2. Reassign authored posts to fallback admin to preserve site content
+            $this->db->execute(
+                "UPDATE `posts` SET `author_id` = ? WHERE `author_id` = ?",
+                [$fallbackAdminId, $this->id]
+            );
+
+            // 3. Reassign authored pages to fallback admin
+            $this->db->execute(
+                "UPDATE `pages` SET `author_id` = ? WHERE `author_id` = ?",
+                [$fallbackAdminId, $this->id]
+            );
+
+            // 4. Preserve media records by reassigning uploader_id
+            $this->db->execute(
+                "UPDATE `media` SET `uploader_id` = ? WHERE `uploader_id` = ?",
+                [$fallbackAdminId, $this->id]
+            );
+
+            // 5. Delete user roles
+            $this->db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$this->id]);
+
+            // 6. Delete email verification records
+            $this->db->execute("DELETE FROM `email_verifications` WHERE `user_id` = ?", [$this->id]);
+
+            // 7. Delete sessions
+            $this->db->execute("DELETE FROM `sessions` WHERE `user_id` = ?", [$this->id]);
+
+            // 8. Delete user record
+            $this->delete();
+        };
+
+        if ($this->db->getPdo()->inTransaction()) {
+            $action();
+        } else {
+            $this->db->transaction($action);
+        }
+    }
+
+    public function isEligibleForSuperAdminRecovery(): bool
+    {
+        // 1. Invariant check: Must have ZERO active Super Admins system-wide
+        if (static::getActiveSuperAdminCount($this->db) > 0) {
+            return false;
         }
 
-        // 1. Delete local avatar file if present
-        if (!empty($this->avatar)) {
-            $avatarService = new \FavoriteCMS\Services\AvatarService();
-            $avatarService->deleteLocalAvatarFile($this->avatar);
+        // 2. User ID must be 1 (original primary site administrator account)
+        if ((int)$this->id !== 1) {
+            return false;
         }
 
-        // 2. Reassign authored posts to fallback admin to preserve site content
-        $this->db->execute(
-            "UPDATE `posts` SET `author_id` = ? WHERE `author_id` = ?",
-            [$fallbackAdminId, $this->id]
-        );
+        // 3. Account must be active (suspended or banned accounts cannot recover)
+        if (!$this->isActive()) {
+            return false;
+        }
 
-        // 3. Reassign authored pages to fallback admin
-        $this->db->execute(
-            "UPDATE `pages` SET `author_id` = ? WHERE `author_id` = ?",
-            [$fallbackAdminId, $this->id]
-        );
+        // 4. Email must match site admin_email setting if configured
+        $adminEmail = (string)\FavoriteCMS\Models\Setting::get('general', 'admin_email', '');
+        if ($adminEmail !== '' && strcasecmp(trim((string)$this->email), trim($adminEmail)) !== 0) {
+            return false;
+        }
 
-        // 4. Preserve media records by reassigning uploader_id
-        $this->db->execute(
-            "UPDATE `media` SET `uploader_id` = ? WHERE `uploader_id` = ?",
-            [$fallbackAdminId, $this->id]
-        );
+        // 5. If storage/installed.lock exists and defines installed_by, verify match
+        $lockPath = (defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__, 2)) . '/storage/installed.lock';
+        if (is_file($lockPath)) {
+            $lockContent = (string)file_get_contents($lockPath);
+            if (preg_match('/^installed_by=(.+)$/m', $lockContent, $m)) {
+                $installedBy = trim($m[1]);
+                if ($installedBy !== '' && !in_array($installedBy, [(string)$this->username, (string)$this->email], true)) {
+                    return false;
+                }
+            }
+        }
 
-        // 5. Delete user roles
-        $this->db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$this->id]);
+        return true;
+    }
 
-        // 6. Delete email verification records
-        $this->db->execute("DELETE FROM `email_verifications` WHERE `user_id` = ?", [$this->id]);
+    public function recoverSuperAdmin(string $password): bool
+    {
+        $action = function() use ($password) {
+            // Lock roles row to guarantee exclusive recovery execution
+            try {
+                $this->db->select("SELECT `id` FROM `roles` WHERE `slug` IN ('super-admin', 'super_admin') OR `name` = 'Super Admin' FOR UPDATE");
+            } catch (\Throwable) {
+            }
 
-        // 7. Delete sessions
-        $this->db->execute("DELETE FROM `sessions` WHERE `user_id` = ?", [$this->id]);
+            // Re-verify eligibility inside the transaction lock
+            if (!$this->isEligibleForSuperAdminRecovery()) {
+                return false;
+            }
 
-        // 8. Delete user record
-        $this->delete();
+            // Verify password
+            if (!$this->verifyPassword($password)) {
+                return false;
+            }
+
+            $role = $this->db->selectOne("SELECT `id` FROM `roles` WHERE `slug` = 'super-admin' LIMIT 1");
+            if (!$role) {
+                $now = date('Y-m-d H:i:s');
+                $roleId = $this->db->insert('roles', [
+                    'name'        => 'Super Admin',
+                    'slug'        => 'super-admin',
+                    'description' => 'Full system access',
+                    'is_system'   => 1,
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ]);
+            } else {
+                $roleId = (int)$role->id;
+            }
+
+            // Assign super-admin role
+            $this->db->execute("DELETE FROM `user_roles` WHERE `user_id` = ?", [$this->id]);
+            $this->db->execute("INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES (?, ?)", [$this->id, $roleId]);
+
+            // Synchronize active session role
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                $_SESSION['auth_user_role'] = 'super-admin';
+            }
+
+            // Security audit log entry
+            $logDir = (defined('APP_ROOT') ? APP_ROOT : dirname(__DIR__, 2)) . '/storage/logs';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $logEntry = sprintf(
+                "[%s] SECURITY AUDIT: Super Admin role recovered for user ID %d (%s, %s) by emergency recovery flow from IP %s\n",
+                date('Y-m-d H:i:s'),
+                $this->id,
+                $this->username,
+                $this->email,
+                $ip
+            );
+            @file_put_contents($logDir . '/security.log', $logEntry, FILE_APPEND | LOCK_EX);
+
+            return true;
+        };
+
+        if ($this->db->getPdo()->inTransaction()) {
+            return (bool)$action();
+        }
+
+        return (bool)$this->db->transaction($action);
     }
 
     public function canCreatePosts(): bool
@@ -322,13 +505,34 @@ class User extends BaseModel
         return (int)($row->cnt ?? 0);
     }
 
+    public function getPrimaryRoleSlug(): string
+    {
+        $roles = $this->getRoles();
+        if (empty($roles)) {
+            return 'subscriber';
+        }
+        foreach ($roles as $role) {
+            $cleanSlug = strtolower(trim(str_replace(['_', ' '], '-', (string)($role->slug ?? ''))));
+            if ($cleanSlug === 'super-admin') {
+                return 'super-admin';
+            }
+        }
+        return strtolower(trim((string)($roles[0]->slug ?? 'subscriber')));
+    }
+
     public function getPrimaryRoleName(): string
     {
         $roles = $this->getRoles();
-        if (!empty($roles)) {
-            return $roles[0]->name ?? 'Subscriber';
+        if (empty($roles)) {
+            return 'Subscriber';
         }
-        return 'Subscriber';
+        foreach ($roles as $role) {
+            $cleanSlug = strtolower(trim(str_replace(['_', ' '], '-', (string)($role->slug ?? ''))));
+            if ($cleanSlug === 'super-admin') {
+                return (string)($role->name ?? 'Super Admin');
+            }
+        }
+        return $roles[0]->name ?? 'Subscriber';
     }
 }
 

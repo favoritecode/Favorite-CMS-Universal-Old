@@ -149,4 +149,24 @@ class AuthPagesRenderTest extends TestCase
         $this->assertStringContainsString('Please enter a valid email address.', $html);
         $this->assertStringContainsString('<label class="fc-label" for="email">', $html);
     }
+
+    public function testRecoveryAndLogoutUseAccessibleShellAndSubdirectoryActions(): void
+    {
+        foreach (['forgot-password', 'reset-password', 'logout'] as $route) {
+            $response = $this->request('GET', '/cms/' . $route, [], [], '/cms/index.php');
+            $html = $response->getContent();
+            $this->assertSame(200, $response->getStatusCode());
+            $this->assertStringContainsString('class="fc-auth__frame"', $html);
+            $this->assertStringContainsString('aria-labelledby="auth-title"', $html);
+            $this->assertStringContainsString('id="auth-title"', $html);
+            $this->assertStringContainsString('action="/cms/' . $route . '"', $html);
+            $this->assertStringContainsString('name="_token" value="' . self::TOKEN . '"', $html);
+            if ($route === 'logout') {
+                $this->assertStringContainsString('Cancel and return to site', $html);
+            } elseif ($route === 'reset-password') {
+                $this->assertStringContainsString('data-toggle-password="password"', $html);
+                $this->assertStringContainsString('data-match="password"', $html);
+            }
+        }
+    }
 }
