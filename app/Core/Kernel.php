@@ -338,7 +338,7 @@ class Kernel
 
         // Module 2: Posts
         if (str_starts_with($path, '/admin/posts')) {
-            if (!$currentUser->canCreatePosts() && !$currentUser->canUpdatePosts() && !$currentUser->canModeratePosts()) {
+            if ($path !== '/admin/posts' && !$currentUser->canCreatePosts() && !$currentUser->canUpdatePosts() && !$currentUser->canModeratePosts()) {
                 return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to access posts.</p>', 403);
             }
 
@@ -401,8 +401,15 @@ class Kernel
 
         // Module 5: Media
         if (str_starts_with($path, '/admin/media')) {
-            if (!$currentUser->canUploadMedia()) {
-                return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to access media.</p>', 403);
+            $manageRoutes = ['/admin/media', '/admin/media/update', '/admin/media/delete'];
+            if (in_array($path, $manageRoutes, true)) {
+                if (!$currentUser->canManageMedia()) {
+                    return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage media.</p>', 403);
+                }
+            } else {
+                if (!$currentUser->canUploadMedia()) {
+                    return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to access media.</p>', 403);
+                }
             }
 
             $ctrl = new MediaController($this->app);

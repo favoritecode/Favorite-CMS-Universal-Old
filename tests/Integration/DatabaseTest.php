@@ -114,7 +114,7 @@ class DatabaseTest extends TestCase
         $migrator = new Migrator(static::$db);
         $migrator->createMigrationsTableIfNotExists();
         $files = $migrator->getMigrationFiles(APP_ROOT . '/database/migrations');
-        $this->assertCount(15, $files, 'Expected 15 migration files, including password resets.');
+        $this->assertCount(17, $files, 'Expected 17 migration files, including role permission alignments.');
 
         foreach ($files as $file) {
             $name = basename($file, '.php');

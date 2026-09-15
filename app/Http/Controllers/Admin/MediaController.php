@@ -42,6 +42,9 @@ class MediaController
         $mediaItems  = Media::filtered($category, $search, self::PER_PAGE, ($currentPage - 1) * self::PER_PAGE);
 
         $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
+        if ($currentUser && !$currentUser->canManageMedia()) {
+            return Response::make('<h1>403 Access Denied</h1><p>You do not have permission to manage media.</p>', 403);
+        }
         $capabilities = $this->capabilityService->getUserCapabilities($currentUser);
 
         $viewData = [
@@ -158,6 +161,11 @@ class MediaController
      */
     public function library(Request $request): Response
     {
+        $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
+        if ($currentUser && !$currentUser->canUploadMedia()) {
+            return Response::json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+
         $category = trim((string)$request->get('category', 'all'));
         $search   = trim((string)$request->get('s', ''));
         $page     = max(1, (int)$request->get('page', 1));
@@ -194,8 +202,8 @@ class MediaController
     {
         $userId = (int)($_SESSION['auth_user_id'] ?? 1);
         $user = User::find($userId);
-        if (!$user || !$user->canUploadMedia()) {
-            $_SESSION['flash_error'] = 'Your account is suspended and cannot modify media.';
+        if (!$user || !$user->canManageMedia()) {
+            $_SESSION['flash_error'] = 'You do not have permission to modify media.';
             return Response::redirect('/admin/media');
         }
 
@@ -218,8 +226,8 @@ class MediaController
     {
         $userId = (int)($_SESSION['auth_user_id'] ?? 1);
         $user = User::find($userId);
-        if (!$user || !$user->canUploadMedia()) {
-            $_SESSION['flash_error'] = 'Your account is suspended and cannot delete media.';
+        if (!$user || !$user->canManageMedia()) {
+            $_SESSION['flash_error'] = 'You do not have permission to delete media.';
             return Response::redirect('/admin/media');
         }
 

@@ -440,6 +440,7 @@ class CommentSubmissionAndRedirectTest extends TestCase
         $this->assertSame('approved', $row->status, 'Comments remain auto-approved');
         $commentId = (int)$row->id;
 
+        $_SESSION['auth_user_id'] = 1;
         $controller = new CommentController(static::$app);
         $moderate = function (string $action) use ($controller, $commentId): void {
             $response = $controller->{$action}(new Request(['id' => $commentId, '_token' => self::TOKEN], [], ['REQUEST_METHOD' => 'GET']));

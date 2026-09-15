@@ -157,18 +157,20 @@ class User extends BaseModel
                 'manage_options',
             ],
             'editor' => [
-                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
+                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts',
                 'moderate_comments', 'manage_pages', 'publish_pages', 'manage_media',
                 'upload_moderator_media', 'manage_menus', 'manage_taxonomy', 'manage_seo',
             ],
             'moderator' => [
-                'view_admin', 'manage_posts', 'edit_others_posts', 'publish_posts', 'approve_posts',
-                'moderate_comments', 'manage_media', 'upload_moderator_media',
+                'view_admin', 'manage_posts', 'edit_others_posts',
+                'moderate_comments', 'upload_moderator_media',
             ],
             'author' => [
-                'view_admin', 'manage_posts', 'manage_media',
+                'view_admin', 'manage_posts', 'upload_moderator_media',
             ],
-            'subscriber' => [],
+            'subscriber' => [
+                'view_admin',
+            ],
             default => [],
         };
     }
@@ -443,13 +445,14 @@ class User extends BaseModel
             return false;
         }
 
-        if ($this->hasRole('subscriber') || $this->hasRole('moderator')) {
+        if ($this->hasRole('subscriber')) {
             return false;
         }
 
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('editor')
+            || $this->hasRole('moderator')
             || $this->hasRole('author')
             || $this->hasPermission('create_posts');
     }
@@ -479,16 +482,42 @@ class User extends BaseModel
             return false;
         }
 
-        if ($this->hasRole('subscriber') || $this->hasRole('moderator')) {
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
+            || $this->hasRole('author')
+            || $this->hasPermission('upload_media')
+            || $this->hasPermission('upload_files')
+            || $this->hasPermission('upload_moderator_media')
+            || $this->hasPermission('manage_media');
+    }
+
+    public function canManageMedia(): bool
+    {
+        if (!$this->isActive()) {
             return false;
         }
 
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('editor')
+            || $this->hasPermission('manage_media');
+    }
+
+    public function canEditOwnPosts(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
             || $this->hasRole('author')
-            || $this->hasPermission('manage_media')
-            || $this->hasPermission('upload_files');
+            || $this->hasPermission('edit_posts')
+            || $this->hasPermission('manage_posts');
     }
 
     public function canEditOtherPosts(): bool
@@ -497,7 +526,34 @@ class User extends BaseModel
             return false;
         }
 
-        if ($this->hasRole('subscriber') || $this->hasRole('author')) {
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
+            || $this->hasPermission('edit_others_posts');
+    }
+
+    public function canEditPost(mixed $post): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
+        if ($authorId <= 0) {
+            return false;
+        }
+
+        if ($authorId === (int)$this->id) {
+            return $this->canEditOwnPosts();
+        }
+
+        return $this->canEditOtherPosts();
+    }
+
+    public function canDeleteOwnPosts(): bool
+    {
+        if (!$this->isActive()) {
             return false;
         }
 
@@ -505,25 +561,8 @@ class User extends BaseModel
             || $this->hasRole('admin')
             || $this->hasRole('editor')
             || $this->hasRole('moderator')
-            || $this->hasPermission('edit_others_posts')
-            || $this->hasPermission('manage_posts');
-    }
-
-    public function canEditPost(mixed $post): bool
-    {
-        if (!$this->isActive() || !$this->canUpdatePosts()) {
-            return false;
-        }
-
-        $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
-        if ($authorId > 0 && $authorId === (int)$this->id) {
-            if ($this->hasRole('subscriber')) {
-                return false;
-            }
-            return true;
-        }
-
-        return $this->canEditOtherPosts();
+            || $this->hasRole('author')
+            || $this->hasPermission('delete_posts');
     }
 
     public function canDeleteOtherPosts(): bool
@@ -532,31 +571,102 @@ class User extends BaseModel
             return false;
         }
 
-        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator')) {
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasPermission('delete_others_posts');
+    }
+
+    public function canDeletePost(mixed $post): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
+        if ($authorId <= 0) {
+            return false;
+        }
+
+        if ($authorId === (int)$this->id) {
+            return $this->canDeleteOwnPosts();
+        }
+
+        return $this->canDeleteOtherPosts();
+    }
+
+    public function canRestoreOwnPosts(): bool
+    {
+        if (!$this->isActive()) {
             return false;
         }
 
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('editor')
-            || $this->hasPermission('delete_others_posts');
+            || $this->hasRole('moderator')
+            || $this->hasRole('author')
+            || $this->hasPermission('delete_posts');
     }
 
-    public function canDeletePost(mixed $post): bool
+    public function canRestorePost(mixed $post): bool
     {
-        if (!$this->isActive() || !$this->canUpdatePosts()) {
+        if (!$this->isActive()) {
             return false;
         }
 
         $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
-        if ($authorId > 0 && $authorId === (int)$this->id) {
-            if ($this->hasRole('subscriber')) {
-                return false;
-            }
-            return true;
+        if ($authorId <= 0) {
+            return false;
+        }
+
+        if ($authorId === (int)$this->id) {
+            return $this->canRestoreOwnPosts();
         }
 
         return $this->canDeleteOtherPosts();
+    }
+
+    public function canEditOwnContentSeo(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasRole('moderator')
+            || $this->hasRole('author');
+    }
+
+    public function canEditOtherContentSeo(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasPermission('manage_seo');
+    }
+
+    public function canEditContentSeo(mixed $content): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        $authorId = is_object($content) ? (int)($content->author_id ?? 0) : (int)$content;
+        if ($authorId <= 0) {
+            return false;
+        }
+
+        if ($authorId === (int)$this->id) {
+            return $this->canEditOwnContentSeo();
+        }
+
+        return $this->canEditOtherContentSeo();
     }
 
     public function canSubmitComments(): bool
@@ -587,6 +697,16 @@ class User extends BaseModel
             || $this->hasPermission('publish_posts');
     }
 
+    public function canPublishPost($post = null): bool
+    {
+        return $this->canDirectPublish();
+    }
+
+    public function canPublishPosts(): bool
+    {
+        return $this->canDirectPublish();
+    }
+
     public function canModeratePosts(): bool
     {
         if (!$this->isActive()) {
@@ -600,7 +720,6 @@ class User extends BaseModel
         return $this->hasRole('super-admin')
             || $this->hasRole('admin')
             || $this->hasRole('moderator')
-            || $this->hasRole('editor')
             || $this->hasPermission('approve_posts');
     }
 
@@ -618,8 +737,7 @@ class User extends BaseModel
             || $this->hasRole('admin')
             || $this->hasRole('moderator')
             || $this->hasRole('editor')
-            || $this->hasPermission('moderate_comments')
-            || $this->hasPermission('approve_posts');
+            || $this->hasPermission('moderate_comments');
     }
 
     public function canManageUsers(): bool

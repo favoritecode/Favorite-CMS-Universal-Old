@@ -178,7 +178,7 @@ class UserSignupAndModerationTest extends TestCase
 
     public function testNormalUserPostCreationForcedToPending(): void
     {
-        $normalUser = $this->createTestUser('author', 'subscriber');
+        $normalUser = $this->createTestUser('author', 'author');
         $_SESSION['auth_user_id'] = $normalUser->id;
 
         $postCtrl = new PostController(static::$app);
@@ -409,7 +409,7 @@ class UserSignupAndModerationTest extends TestCase
 
     public function testNormalUserPostUpdateForcesPendingOnPublishAttempt(): void
     {
-        $normalUser = $this->createTestUser('writer', 'subscriber');
+        $normalUser = $this->createTestUser('writer', 'author');
         $_SESSION['auth_user_id'] = $normalUser->id;
 
         // Create a draft post owned by normal user

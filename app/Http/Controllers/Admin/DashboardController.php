@@ -34,7 +34,7 @@ class DashboardController
             return Response::redirect('/admin/login');
         }
 
-        if (!$currentUser->hasPermission('view_admin') && !$currentUser->canCreatePosts() && !$currentUser->canUpdatePosts()) {
+        if (!$currentUser->hasPermission('view_admin') && !$currentUser->canCreatePosts() && !$currentUser->canUpdatePosts() && !$currentUser->hasRole('subscriber')) {
             return Response::redirect('/admin/users/profile');
         }
 
@@ -75,7 +75,7 @@ class DashboardController
             ? (int)($db->selectOne("SELECT COUNT(*) AS cnt FROM `users`")->cnt ?? 0)
             : null;
 
-        $mediaCount = $currentUser->canUploadMedia()
+        $mediaCount = $currentUser->canManageMedia()
             ? (int)($db->selectOne("SELECT COUNT(*) AS cnt FROM `media`")->cnt ?? 0)
             : 0;
 

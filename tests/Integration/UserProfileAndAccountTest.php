@@ -435,18 +435,18 @@ class UserProfileAndAccountTest extends TestCase
 
     public function testPostModerationEnforcement(): void
     {
-        $subscriber = $this->createTestUser('sub_author', 'subscriber', 'active');
+        $author = $this->createTestUser('sub_author', 'author', 'active');
         $moderator  = $this->createTestUser('mod_author', 'moderator', 'active');
 
         $controller = new PostController(static::$app);
 
-        // 1. Subscriber attempts direct publish: forced to 'pending'
-        $_SESSION['auth_user_id'] = $subscriber->id;
+        // 1. Author attempts direct publish: forced to 'pending'
+        $_SESSION['auth_user_id'] = $author->id;
         $subReq = new Request(
             get: [],
             post: [
-                'title'       => 'Subscriber Submission Test',
-                'content'     => 'Article content by subscriber',
+                'title'       => 'Author Submission Test',
+                'content'     => 'Article content by author',
                 'status'      => 'published', // attempts to bypass
                 'action_type' => 'publish',   // attempts to bypass
             ],
@@ -454,9 +454,9 @@ class UserProfileAndAccountTest extends TestCase
         );
         $controller->store($subReq);
 
-        $subPost = static::$db->selectOne("SELECT * FROM `posts` WHERE `title` = 'Subscriber Submission Test'");
+        $subPost = static::$db->selectOne("SELECT * FROM `posts` WHERE `title` = 'Author Submission Test'");
         $this->assertNotNull($subPost);
-        $this->assertSame('pending', $subPost->status, 'Subscriber post MUST be forced to pending status');
+        $this->assertSame('pending', $subPost->status, 'Author post MUST be forced to pending status');
         $this->assertStringContainsString('awaiting review', $_SESSION['flash_success'] ?? '');
 
         // 2. Moderator publishes: auto-published

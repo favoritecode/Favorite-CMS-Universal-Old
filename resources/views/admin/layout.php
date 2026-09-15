@@ -643,10 +643,12 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                 ?>
                 <?php
                 $canAccessPosts = $currentAdminUser && ($currentAdminUser->canCreatePosts() || $currentAdminUser->canUpdatePosts() || $currentAdminUser->canModeratePosts());
+                $canAccessPosts = $currentAdminUser && $currentAdminUser->isActive();
                 $canCreatePosts = $currentAdminUser && $currentAdminUser->canCreatePosts();
                 $canManageTaxonomies = $currentAdminUser && $currentAdminUser->canManageTaxonomies();
                 $canManagePages = $currentAdminUser && $currentAdminUser->canManagePages();
                 $canUploadMedia = $currentAdminUser && $currentAdminUser->canUploadMedia();
+                $canManageMedia = $currentAdminUser && $currentAdminUser->canManageMedia();
                 $canManageMenus = $currentAdminUser && $currentAdminUser->canManageMenus();
                 $isPostsActive = in_array($activeMenu, ['posts', 'posts-new', 'categories', 'tags']);
                 ?>
@@ -697,7 +699,7 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                     </ul>
                 </li>
                 <?php endif; ?>
-                <?php if ($canUploadMedia): ?>
+                <?php if ($canManageMedia): ?>
                 <li class="wp-menu-item <?php echo $activeMenu === 'media' ? 'active' : ''; ?>">
                     <a href="/admin/media" class="wp-menu-link">🖼️ Media</a>
                 </li>

@@ -27,18 +27,32 @@
     <input type="hidden" name="_token" value="<?php echo htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8'); ?>">
     <input type="hidden" name="status" value="<?php echo htmlspecialchars($status, ENT_QUOTES, 'UTF-8'); ?>">
 
+    <?php
+    $canBulkTrash = $currentUser && ($currentUser->canDeleteOwnPosts() || $currentUser->canDeleteOtherPosts());
+    $canBulkRestore = $currentUser && ($currentUser->canRestoreOwnPosts() || $currentUser->canDeleteOtherPosts());
+    $canBulkDelete = $currentUser && ($currentUser->canDeleteOwnPosts() || $currentUser->canDeleteOtherPosts());
+    $canBulkModerate = $currentUser && $currentUser->canModeratePosts();
+    $hasAnyBulkAction = ($status === 'trash') ? ($canBulkRestore || $canBulkDelete) : ($canBulkTrash || $canBulkDelete || $canBulkModerate);
+    ?>
+    <?php if ($hasAnyBulkAction): ?>
     <div class="bulk-actions-wrap">
         <select name="bulk_action" class="form-control" style="width: auto; max-width: 200px; display: inline-block;">
             <option value="">Bulk Actions</option>
             <?php if ($status === 'trash'): ?>
-                <option value="restore">Restore</option>
-                <option value="delete">Delete Permanently</option>
+                <?php if ($canBulkRestore): ?>
+                    <option value="restore">Restore</option>
+                <?php endif; ?>
+                <?php if ($canBulkDelete): ?>
+                    <option value="delete">Delete Permanently</option>
+                <?php endif; ?>
             <?php else: ?>
-                <?php if ($currentUser && $currentUser->canModeratePosts()): ?>
+                <?php if ($canBulkModerate): ?>
                     <option value="approve">Approve</option>
                     <option value="reject">Reject</option>
                 <?php endif; ?>
-                <option value="trash">Move to Trash</option>
+                <?php if ($canBulkTrash): ?>
+                    <option value="trash">Move to Trash</option>
+                <?php endif; ?>
                 <?php if ($currentUser && $currentUser->canDeleteOtherPosts()): ?>
                     <option value="delete">Delete Permanently</option>
                 <?php endif; ?>
@@ -47,13 +61,16 @@
         <button type="submit" class="btn btn-secondary">Apply</button>
         <span class="bulk-count-badge">0 selected</span>
     </div>
+    <?php endif; ?>
 
     <div class="wp-table-wrap">
         <table class="wp-table">
             <thead>
                 <tr>
                     <th style="width: 32px; text-align: center;">
-                        <input type="checkbox" id="select-all-posts" data-select-all>
+                        <?php if ($hasAnyBulkAction): ?>
+                            <input type="checkbox" id="select-all-posts" data-select-all>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 60px;">Image</th>
                     <th>Title</th>
@@ -81,7 +98,9 @@
                     ?>
                     <tr>
                         <td style="text-align: center;">
-                            <input type="checkbox" name="ids[]" value="<?php echo (int)$post->id; ?>" class="bulk-cb">
+                            <?php if ($hasAnyBulkAction): ?>
+                                <input type="checkbox" name="ids[]" value="<?php echo (int)$post->id; ?>" class="bulk-cb">
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($featImg && !empty($featImg->url)): ?>
@@ -99,6 +118,7 @@
                             <?php
                             $canEditThisPost = $currentUser && $currentUser->canEditPost($post);
                             $canDeleteThisPost = $currentUser && $currentUser->canDeletePost($post);
+                            $canRestoreThisPost = $currentUser && $currentUser->canRestorePost($post);
                             ?>
                             <strong>
                                 <?php if ($canEditThisPost): ?>
@@ -113,8 +133,10 @@
                             </strong>
                             <div class="row-actions">
                                 <?php if ($post->status === 'trash'): ?>
+                                    <?php if ($canRestoreThisPost): ?>
+                                        <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/restore?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-blue);">Restore</button><?php echo $canDeleteThisPost ? ' |' : ''; ?>
+                                    <?php endif; ?>
                                     <?php if ($canDeleteThisPost): ?>
-                                        <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/restore?id=<?php echo (int)$post->id; ?>" class="core-action-link" style="color: var(--wp-blue);">Restore</button> |
                                         <button type="submit" form="core-action-form" formmethod="POST" formnovalidate formaction="<?php echo htmlspecialchars(site_base_path(), ENT_QUOTES, 'UTF-8'); ?>/admin/posts/delete?id=<?php echo (int)$post->id; ?>" class="core-action-link" onclick="return confirm('Permanently delete this post?');" style="color: var(--wp-danger);">Delete Permanently</button>
                                     <?php endif; ?>
                                 <?php else: ?>

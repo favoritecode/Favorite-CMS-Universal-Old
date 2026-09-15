@@ -4,6 +4,7 @@ $canManagePages = $currentUser && $currentUser->canManagePages();
 $canModerateComments = $currentUser && $currentUser->canModerateComments();
 $canManageUsers = $currentUser && $currentUser->canManageUsers();
 $canUploadMedia = $currentUser && $currentUser->canUploadMedia();
+$canManageMedia = $currentUser && $currentUser->canManageMedia();
 $canCreatePosts = $currentUser && $currentUser->canCreatePosts();
 $isAdmin = $currentUser && ($currentUser->hasRole('admin') || $currentUser->hasRole('super-admin') || $currentUser->isSuperAdmin());
 $isAuthor = $currentUser && $currentUser->hasRole('author');
@@ -19,7 +20,7 @@ $isAuthor = $currentUser && $currentUser->hasRole('author');
         <div style="font-size: 12px; color: var(--wp-text-muted);">
             <?php echo $postsCount['published'] ?? 0; ?> published &bull; <?php echo $postsCount['draft'] ?? 0; ?> drafts
         </div>
-        <a href="/admin/posts" style="display: inline-block; margin-top: 8px; font-size: 12px;"><?php echo $isAuthor ? 'View My Posts &rarr;' : 'Manage Posts &rarr;'; ?></a>
+        <a href="/admin/posts" style="display: inline-block; margin-top: 8px; font-size: 12px;"><?php echo $isAuthor ? 'View My Posts &rarr;' : ($canCreatePosts ? 'Manage Posts &rarr;' : 'View Posts &rarr;'); ?></a>
     </div>
 
     <?php if ($canManagePages && $pagesCount !== null): ?>
@@ -53,7 +54,7 @@ $isAuthor = $currentUser && $currentUser->hasRole('author');
         </div>
         <a href="/admin/users" style="display: inline-block; margin-top: 8px; font-size: 12px;">Manage Users &rarr;</a>
     </div>
-    <?php elseif ($canUploadMedia): ?>
+    <?php elseif ($canManageMedia): ?>
     <div class="form-card" style="padding: 16px;">
         <h3 style="color: var(--wp-text-muted); font-size: 13px; text-transform: uppercase;">Media</h3>
         <div style="font-size: 26px; font-weight: 700; color: #1d2327; margin: 4px 0;"><?php echo (int)$mediaCount; ?> Files</div>
@@ -71,7 +72,7 @@ $isAuthor = $currentUser && $currentUser->hasRole('author');
             <?php echo htmlspecialchars($currentUser->name ?: $currentUser->username, ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <div style="font-size: 12px; color: var(--wp-text-muted);">
-            Role: <?php echo htmlspecialchars(ucwords(str_replace(['-', '_'], ' ', $currentUser->getPrimaryRoleSlug() ?: 'Author')), ENT_QUOTES, 'UTF-8'); ?>
+            Role: <?php echo htmlspecialchars(ucwords(str_replace(['-', '_'], ' ', $currentUser->getPrimaryRoleSlug() ?: 'User')), ENT_QUOTES, 'UTF-8'); ?>
         </div>
         <a href="/admin/users/profile" style="display: inline-block; margin-top: 8px; font-size: 12px;">Edit Profile &rarr;</a>
     </div>
@@ -117,8 +118,8 @@ $isAuthor = $currentUser && $currentUser->hasRole('author');
         <?php endif; ?>
     </div>
 
-    <!-- Quick Draft -->
     <?php if ($canCreatePosts): ?>
+    <!-- Quick Draft -->
     <div class="form-card">
         <h2 style="font-size: 16px; margin-bottom: 12px; font-weight: 600;">Quick Draft</h2>
         <form method="POST" action="/admin/posts/quick-draft">
@@ -136,4 +137,3 @@ $isAuthor = $currentUser && $currentUser->hasRole('author');
     </div>
     <?php endif; ?>
 </div>
-

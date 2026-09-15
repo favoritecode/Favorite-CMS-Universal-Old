@@ -177,14 +177,16 @@ class PostController
             $post->syncTags($tagsStr);
         }
 
-        $post->saveSeoMeta([
-            'meta_title'       => trim((string)$request->post('meta_title', '')),
-            'meta_description' => trim((string)$request->post('meta_description', '')),
-            'og_title'         => trim((string)$request->post('og_title', '')),
-            'og_description'   => trim((string)$request->post('og_description', '')),
-            'canonical_url'    => trim((string)$request->post('canonical_url', '')),
-            'robots'           => trim((string)$request->post('robots', 'index,follow')),
-        ]);
+        if ($currentUser->canEditContentSeo($post)) {
+            $post->saveSeoMeta([
+                'meta_title'       => trim((string)$request->post('meta_title', '')),
+                'meta_description' => trim((string)$request->post('meta_description', '')),
+                'og_title'         => trim((string)$request->post('og_title', '')),
+                'og_description'   => trim((string)$request->post('og_description', '')),
+                'canonical_url'    => trim((string)$request->post('canonical_url', '')),
+                'robots'           => trim((string)$request->post('robots', 'index,follow')),
+            ]);
+        }
 
         if ($status === 'pending') {
             $_SESSION['flash_success'] = 'Post submitted successfully and is awaiting review by a moderator.';
@@ -317,14 +319,16 @@ class PostController
         $post->syncTaxonomies($catIds, 'category');
         $post->syncTags($tagsStr);
 
-        $post->saveSeoMeta([
-            'meta_title'       => trim((string)$request->post('meta_title', '')),
-            'meta_description' => trim((string)$request->post('meta_description', '')),
-            'og_title'         => trim((string)$request->post('og_title', '')),
-            'og_description'   => trim((string)$request->post('og_description', '')),
-            'canonical_url'    => trim((string)$request->post('canonical_url', '')),
-            'robots'           => trim((string)$request->post('robots', 'index,follow')),
-        ]);
+        if ($currentUser->canEditContentSeo($post)) {
+            $post->saveSeoMeta([
+                'meta_title'       => trim((string)$request->post('meta_title', '')),
+                'meta_description' => trim((string)$request->post('meta_description', '')),
+                'og_title'         => trim((string)$request->post('og_title', '')),
+                'og_description'   => trim((string)$request->post('og_description', '')),
+                'canonical_url'    => trim((string)$request->post('canonical_url', '')),
+                'robots'           => trim((string)$request->post('robots', 'index,follow')),
+            ]);
+        }
 
         if ($status === 'pending') {
             $_SESSION['flash_success'] = 'Post submitted successfully and is awaiting review by a moderator.';
@@ -436,7 +440,7 @@ class PostController
         $id = (int)$request->get('id', $request->post('id', 0));
         $post = Post::find($id);
         if ($post) {
-            if (!$currentUser || !$currentUser->canDeletePost($post)) {
+            if (!$currentUser || !$currentUser->canRestorePost($post)) {
                 $_SESSION['flash_error'] = 'You do not have permission to modify this post.';
                 return Response::redirect('/admin/posts');
             }
@@ -531,6 +535,7 @@ class PostController
 
         $db = $this->app->make(Database::class);
         $count = 0;
+        $deniedCount = 0;
 
         foreach ($ids as $id) {
             $post = Post::find($id);
@@ -538,12 +543,19 @@ class PostController
                 continue;
             }
 
-            if (in_array($action, ['trash', 'restore', 'delete'], true)) {
+            if (in_array($action, ['trash', 'delete'], true)) {
                 if (!$currentUser->canDeletePost($post)) {
+                    $deniedCount++;
+                    continue;
+                }
+            } elseif ($action === 'restore') {
+                if (!$currentUser->canRestorePost($post)) {
+                    $deniedCount++;
                     continue;
                 }
             } elseif (in_array($action, ['approve', 'reject'], true)) {
                 if (!$currentUser->canModeratePosts()) {
+                    $deniedCount++;
                     continue;
                 }
             } else {
@@ -586,9 +598,17 @@ class PostController
                 'reject'  => 'rejected',
                 default   => 'processed',
             };
-            $_SESSION['flash_success'] = "{$count} post(s) successfully {$label}.";
+            $msg = "{$count} post(s) successfully {$label}.";
+            if ($deniedCount > 0) {
+                $msg .= " {$deniedCount} post(s) skipped due to insufficient permissions.";
+            }
+            $_SESSION['flash_success'] = $msg;
         } else {
-            $_SESSION['flash_error'] = 'No posts were updated.';
+            if ($deniedCount > 0) {
+                $_SESSION['flash_error'] = "No posts were updated. {$deniedCount} post(s) skipped due to insufficient permissions.";
+            } else {
+                $_SESSION['flash_error'] = 'No posts were updated.';
+            }
         }
 
         return Response::redirect($redirectUrl);

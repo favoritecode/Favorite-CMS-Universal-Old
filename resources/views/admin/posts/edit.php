@@ -212,6 +212,7 @@ $postId = (int)($post->id ?? 0);
             </div>
 
             <!-- SEO Settings Box -->
+            <?php if ($currentUser && $currentUser->canEditContentSeo($post)): ?>
             <div class="form-card">
                 <h3 style="font-size: 14px; margin-bottom: 14px; font-weight: 600; border-bottom: 1px solid var(--wp-border); padding-bottom: 8px;">
                     Search Engine Optimization (SEO) & Social Meta
@@ -251,6 +252,7 @@ $postId = (int)($post->id ?? 0);
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
 
         <!-- Right Sidebar Column -->
