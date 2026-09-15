@@ -517,10 +517,46 @@ class User extends BaseModel
 
         $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
         if ($authorId > 0 && $authorId === (int)$this->id) {
+            if ($this->hasRole('subscriber')) {
+                return false;
+            }
             return true;
         }
 
         return $this->canEditOtherPosts();
+    }
+
+    public function canDeleteOtherPosts(): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+
+        if ($this->hasRole('subscriber') || $this->hasRole('author') || $this->hasRole('moderator')) {
+            return false;
+        }
+
+        return $this->hasRole('super-admin')
+            || $this->hasRole('admin')
+            || $this->hasRole('editor')
+            || $this->hasPermission('delete_others_posts');
+    }
+
+    public function canDeletePost(mixed $post): bool
+    {
+        if (!$this->isActive() || !$this->canUpdatePosts()) {
+            return false;
+        }
+
+        $authorId = is_object($post) ? (int)($post->author_id ?? 0) : (int)$post;
+        if ($authorId > 0 && $authorId === (int)$this->id) {
+            if ($this->hasRole('subscriber')) {
+                return false;
+            }
+            return true;
+        }
+
+        return $this->canDeleteOtherPosts();
     }
 
     public function canSubmitComments(): bool

@@ -487,4 +487,178 @@ class RolePermissionMatrixTest extends TestCase
         // When Super Admin count is >= 1, recovery is not eligible
         $this->assertFalse($user1->isEligibleForSuperAdminRecovery());
     }
+
+    /**
+     * 16. Moderator CANNOT trash, restore, or delete other users' posts
+     */
+    public function testModeratorCannotTrashRestoreOrDeleteOtherUsersPost(): void
+    {
+        $moderator = $this->createTestUser('moderator', 'mod_notrash');
+        $author = $this->createTestUser('author', 'aut_notrash');
+        $authorPost = $this->createTestPost($author->id, 'published');
+        $modPost = $this->createTestPost($moderator->id, 'published');
+
+        // Capability checks
+        $this->assertFalse($moderator->canDeleteOtherPosts());
+        $this->assertFalse($moderator->canDeletePost($authorPost));
+        $this->assertTrue($moderator->canDeletePost($modPost));
+
+        $_SESSION['auth_user_id'] = $moderator->id;
+
+        // 1. Attempt to trash other user's post -> blocked
+        $req = Request::create('POST', '/admin/posts/trash?id=' . $authorPost->id, [
+            'id'     => $authorPost->id,
+            '_token' => 'test-token-12345',
+        ]);
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(302, $resp->getStatusCode());
+        $this->assertStringContainsString('permission', strtolower($_SESSION['flash_error'] ?? ''));
+        $this->assertEquals('published', Post::find($authorPost->id)->status);
+
+        // 2. Put other user's post in trash, attempt restore -> blocked
+        static::$db->execute("UPDATE `posts` SET `status` = 'trash' WHERE `id` = ?", [$authorPost->id]);
+        $req = Request::create('POST', '/admin/posts/restore?id=' . $authorPost->id, [
+            'id'     => $authorPost->id,
+            '_token' => 'test-token-12345',
+        ]);
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(302, $resp->getStatusCode());
+        $this->assertStringContainsString('permission', strtolower($_SESSION['flash_error'] ?? ''));
+        $this->assertEquals('trash', Post::find($authorPost->id)->status);
+
+        // 3. Attempt permanent delete -> blocked
+        $req = Request::create('POST', '/admin/posts/delete?id=' . $authorPost->id, [
+            'id'     => $authorPost->id,
+            '_token' => 'test-token-12345',
+        ]);
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(302, $resp->getStatusCode());
+        $this->assertStringContainsString('permission', strtolower($_SESSION['flash_error'] ?? ''));
+        $this->assertNotNull(Post::find($authorPost->id));
+
+        // 4. Moderator trashing OWN post -> allowed
+        $req = Request::create('POST', '/admin/posts/trash?id=' . $modPost->id, [
+            'id'     => $modPost->id,
+            '_token' => 'test-token-12345',
+        ]);
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(302, $resp->getStatusCode());
+        $this->assertEquals('trash', Post::find($modPost->id)->status);
+    }
+
+    /**
+     * 17. Moderator bulk actions skip other users' posts for destructive operations
+     */
+    public function testModeratorBulkActionSkipsOtherUsersPostForDestructiveActions(): void
+    {
+        $moderator = $this->createTestUser('moderator', 'mod_bulk');
+        $author = $this->createTestUser('author', 'aut_bulk');
+        $authorPost = $this->createTestPost($author->id, 'published');
+        $modPost = $this->createTestPost($moderator->id, 'published');
+
+        $_SESSION['auth_user_id'] = $moderator->id;
+
+        $req = Request::create('POST', '/admin/posts/bulk', [
+            'bulk_action' => 'trash',
+            'ids'         => [$authorPost->id, $modPost->id],
+            '_token'      => 'test-token-12345',
+        ]);
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(302, $resp->getStatusCode());
+
+        // Author's post was NOT trashed
+        $this->assertEquals('published', Post::find($authorPost->id)->status);
+        // Moderator's own post WAS trashed
+        $this->assertEquals('trash', Post::find($modPost->id)->status);
+    }
+
+    /**
+     * 18. Posts list view hides destructive actions for Moderator on other users' posts
+     */
+    public function testPostsListViewHidesDestructiveActionsForModeratorOnOtherPosts(): void
+    {
+        $moderator = $this->createTestUser('moderator', 'mod_list');
+        $author = $this->createTestUser('author', 'aut_list');
+        $authorPost = $this->createTestPost($author->id, 'published');
+        $modPost = $this->createTestPost($moderator->id, 'published');
+
+        $_SESSION['auth_user_id'] = $moderator->id;
+
+        $req = Request::create('GET', '/admin/posts');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(200, $resp->getStatusCode());
+        $body = (string)$resp->getContent();
+
+        // Moderator sees Trash option for their own post
+        $this->assertStringContainsString('action="/admin/posts/trash?id=' . $modPost->id . '"', $body);
+
+        // Moderator does NOT see Trash option for author's post
+        $this->assertStringNotContainsString('action="/admin/posts/trash?id=' . $authorPost->id . '"', $body);
+    }
+
+    /**
+     * 19. Author dashboard access returns 200 without 500 error and displays scoped view
+     */
+    public function testAuthorDashboardAccessAndRestrictedView(): void
+    {
+        $author = $this->createTestUser('author', 'aut_dash');
+        $authorPost = $this->createTestPost($author->id, 'published');
+
+        $_SESSION['auth_user_id'] = $author->id;
+
+        $req = Request::create('GET', '/admin');
+        $resp = static::$kernel->handle($req);
+
+        // Crucial invariant: Author visiting /admin must return 200 OK (NOT 500 error)
+        $this->assertEquals(200, $resp->getStatusCode());
+        $body = (string)$resp->getContent();
+
+        $this->assertStringContainsString('Dashboard', $body);
+        $this->assertStringContainsString('My Posts', $body);
+        $this->assertStringContainsString('My Account', $body);
+
+        // Author dashboard MUST NOT contain unauthorized management cards or links
+        $this->assertStringNotContainsString('href="/admin/pages"', $body);
+        $this->assertStringNotContainsString('href="/admin/comments"', $body);
+        $this->assertStringNotContainsString('href="/admin/users"', $body);
+        $this->assertStringNotContainsString('+ Add an About Page', $body);
+        $this->assertStringNotContainsString('Customize Theme', $body);
+
+        // Quick Draft form is available for author
+        $this->assertStringContainsString('action="/admin/posts/quick-draft"', $body);
+    }
+
+    /**
+     * 20. Author cannot access unpermitted administrative areas
+     */
+    public function testAuthorCannotAccessAdminPagesCommentsTaxonomiesMenus(): void
+    {
+        $author = $this->createTestUser('author', 'aut_nopages');
+        $_SESSION['auth_user_id'] = $author->id;
+
+        // Pages
+        $req = Request::create('GET', '/admin/pages');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(403, $resp->getStatusCode());
+
+        // Comments
+        $req = Request::create('GET', '/admin/comments');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(403, $resp->getStatusCode());
+
+        // Taxonomies
+        $req = Request::create('GET', '/admin/taxonomies/categories');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(403, $resp->getStatusCode());
+
+        // Menus
+        $req = Request::create('GET', '/admin/menus');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(403, $resp->getStatusCode());
+
+        // Users
+        $req = Request::create('GET', '/admin/users');
+        $resp = static::$kernel->handle($req);
+        $this->assertEquals(403, $resp->getStatusCode());
+    }
 }

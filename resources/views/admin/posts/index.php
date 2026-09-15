@@ -39,7 +39,7 @@
                     <option value="reject">Reject</option>
                 <?php endif; ?>
                 <option value="trash">Move to Trash</option>
-                <?php if ($currentUser && $currentUser->canModeratePosts()): ?>
+                <?php if ($currentUser && $currentUser->canDeleteOtherPosts()): ?>
                     <option value="delete">Delete Permanently</option>
                 <?php endif; ?>
             <?php endif; ?>
@@ -98,7 +98,7 @@
                         <td>
                             <?php
                             $canEditThisPost = $currentUser && $currentUser->canEditPost($post);
-                            $canDeleteThisPost = $currentUser && $currentUser->canUpdatePosts() && ($currentUser->canModeratePosts() || (int)$post->author_id === (int)$currentUser->id);
+                            $canDeleteThisPost = $currentUser && $currentUser->canDeletePost($post);
                             ?>
                             <strong>
                                 <?php if ($canEditThisPost): ?>

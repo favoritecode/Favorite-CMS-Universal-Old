@@ -417,10 +417,10 @@ class PostController
     public function trash(Request $request): Response
     {
         $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
-        $id = (int)$request->get('id', 0);
+        $id = (int)$request->get('id', $request->post('id', 0));
         $post = Post::find($id);
         if ($post) {
-            if (!$currentUser || !$currentUser->canUpdatePosts() || (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id)) {
+            if (!$currentUser || !$currentUser->canDeletePost($post)) {
                 $_SESSION['flash_error'] = 'You do not have permission to modify this post.';
                 return Response::redirect('/admin/posts');
             }
@@ -433,10 +433,10 @@ class PostController
     public function restore(Request $request): Response
     {
         $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
-        $id = (int)$request->get('id', 0);
+        $id = (int)$request->get('id', $request->post('id', 0));
         $post = Post::find($id);
         if ($post) {
-            if (!$currentUser || !$currentUser->canUpdatePosts() || (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id)) {
+            if (!$currentUser || !$currentUser->canDeletePost($post)) {
                 $_SESSION['flash_error'] = 'You do not have permission to modify this post.';
                 return Response::redirect('/admin/posts');
             }
@@ -449,10 +449,10 @@ class PostController
     public function delete(Request $request): Response
     {
         $currentUser = isset($_SESSION['auth_user_id']) ? User::find((int)$_SESSION['auth_user_id']) : null;
-        $id = (int)$request->get('id', 0);
+        $id = (int)$request->get('id', $request->post('id', 0));
         $post = Post::find($id);
         if ($post) {
-            if (!$currentUser || !$currentUser->canUpdatePosts() || (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id)) {
+            if (!$currentUser || !$currentUser->canDeletePost($post)) {
                 $_SESSION['flash_error'] = 'You do not have permission to delete this post.';
                 return Response::redirect('/admin/posts');
             }
@@ -538,7 +538,15 @@ class PostController
                 continue;
             }
 
-            if (!$currentUser->canModeratePosts() && (int)$post->author_id !== (int)$currentUser->id) {
+            if (in_array($action, ['trash', 'restore', 'delete'], true)) {
+                if (!$currentUser->canDeletePost($post)) {
+                    continue;
+                }
+            } elseif (in_array($action, ['approve', 'reject'], true)) {
+                if (!$currentUser->canModeratePosts()) {
+                    continue;
+                }
+            } else {
                 continue;
             }
 
