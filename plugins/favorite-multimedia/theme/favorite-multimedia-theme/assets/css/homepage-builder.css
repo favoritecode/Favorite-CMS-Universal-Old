@@ -1,0 +1,499 @@
+/**
+ * Favorite Multimedia — No-Code Homepage Builder Stylesheet
+ * Version: 1.0.0
+ */
+
+/* Homepage Tab Action Header */
+.fm-hp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #334155;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.fm-hp-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fm-badge-count {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    font-weight: 600;
+}
+
+.fm-hp-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Sections List Container */
+.fm-hp-sections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 100px;
+}
+
+/* Section Card Item */
+.fm-builder-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    user-select: none;
+}
+
+.fm-builder-card:hover {
+    border-color: #475569;
+}
+
+.fm-builder-card.is-disabled {
+    opacity: 0.55;
+    background: #162032;
+}
+
+.fm-builder-card.is-dragging {
+    opacity: 0.35;
+    border-color: #38bdf8;
+    border-style: dashed;
+}
+
+.fm-builder-card.drag-over {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+}
+
+/* Card Header Row */
+.fm-builder-card-head {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    gap: 12px;
+    cursor: grab;
+}
+
+.fm-builder-card-head:active {
+    cursor: grabbing;
+}
+
+/* Reorder Gripper & Controls */
+.fm-reorder-ctrls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+}
+
+.fm-grip-handle {
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 24px;
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.fm-reorder-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: #94a3b8;
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s ease;
+}
+
+.fm-reorder-btn:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: #475569;
+}
+
+/* Card Info */
+.fm-card-main-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.fm-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.fm-sec-title-display {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.fm-pill {
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.fm-pill-type {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.fm-pill-layout {
+    background: rgba(148, 163, 184, 0.1);
+    color: #94a3b8;
+}
+
+.fm-pill-limit {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+}
+
+.fm-sec-subtitle-display {
+    display: block;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Card Controls */
+.fm-card-ctrls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Device Visibility Indicators */
+.fm-device-indicator {
+    display: inline-flex;
+    gap: 3px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.fm-device-indicator span.off {
+    opacity: 0.25;
+    filter: grayscale(100%);
+}
+
+/* Switch Toggle */
+.fm-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.fm-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.fm-switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #334155;
+    transition: 0.25s ease;
+    border-radius: 20px;
+}
+
+.fm-switch-slider::before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.25s ease;
+    border-radius: 50%;
+}
+
+.fm-switch input:checked + .fm-switch-slider {
+    background-color: #10b981;
+}
+
+.fm-switch input:checked + .fm-switch-slider::before {
+    transform: translateX(16px);
+}
+
+/* Card Action Buttons */
+.fm-btn-icon {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.fm-btn-icon:hover {
+    background: #334155;
+    color: #ffffff;
+    border-color: #475569;
+}
+
+.fm-btn-icon-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border-color: #ef4444;
+}
+
+/* Edit Drawer */
+.fm-sec-drawer {
+    display: none;
+    padding: 16px;
+    background: #0f172a;
+    border-top: 1px solid #334155;
+}
+
+.fm-sec-drawer.open {
+    display: block;
+}
+
+.fm-drawer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.fm-drawer-full {
+    grid-column: 1 / -1;
+}
+
+.fm-drawer-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.fm-drawer-input,
+.fm-drawer-select {
+    width: 100%;
+    padding: 8px 12px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    color: #f8fafc;
+    font-size: 0.85rem;
+    box-sizing: border-box;
+}
+
+.fm-drawer-input:focus,
+.fm-drawer-select:focus {
+    outline: none;
+    border-color: #38bdf8;
+}
+
+.fm-drawer-checkboxes {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.fm-drawer-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+/* Add Section Modal */
+.fm-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.fm-modal-backdrop.open {
+    display: flex;
+}
+
+.fm-modal-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 780px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.fm-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #334155;
+}
+
+.fm-modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.fm-modal-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.3rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+
+.fm-modal-close:hover {
+    color: #ffffff;
+}
+
+.fm-modal-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 12px 24px;
+    background: #141d2e;
+    border-bottom: 1px solid #334155;
+    overflow-x: auto;
+}
+
+.fm-modal-tab {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.fm-modal-tab:hover {
+    color: #f8fafc;
+    background: #1e293b;
+}
+
+.fm-modal-tab.active {
+    background: #38bdf8;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.fm-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.fm-section-picker-card {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.fm-section-picker-card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+}
+
+.fm-sec-picker-name {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.fm-sec-picker-desc {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.fm-sec-picker-btn {
+    align-self: flex-start;
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.fm-sec-picker-btn:hover {
+    background: #1d4ed8;
+}
+

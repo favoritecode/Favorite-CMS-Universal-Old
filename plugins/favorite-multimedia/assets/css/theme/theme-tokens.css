@@ -1,0 +1,92 @@
+/**
+ * Favorite Multimedia Theme System — Base Tokens & CSS Custom Properties
+ * Version: 1.0.0
+ */
+
+:root {
+  /* Colors */
+  --fm-color-primary: #E50914;
+  --fm-color-secondary: #1E293B;
+  --fm-color-accent: #FFB800;
+  --fm-color-bg-page: #0B0E14;
+  --fm-color-bg-surface: #121824;
+  --fm-color-bg-elevated: #1C2436;
+  --fm-color-text-primary: #FFFFFF;
+  --fm-color-text-secondary: #94A3B8;
+  --fm-color-text-muted: #64748B;
+  --fm-color-border: #2A3548;
+  --fm-color-success: #10B981;
+  --fm-color-warning: #F59E0B;
+  --fm-color-danger: #EF4444;
+
+  /* Typography */
+  --fm-font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --fm-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --fm-font-bangla: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
+  --fm-font-weight-heading: 700;
+  --fm-font-size-body: 15px;
+  --fm-title-scale: 1.25;
+  --fm-line-height: 1.5;
+
+  /* Layout & Density */
+  --fm-layout-max-width: 1440px;
+  --fm-layout-page-padding: 24px;
+  --fm-layout-section-gap: 48px;
+  --fm-layout-card-gap: 20px;
+  --fm-layout-density: comfortable;
+
+  /* Surfaces & Elevation */
+  --fm-radius-card: 12px;
+  --fm-radius-button: 8px;
+  --fm-radius-modal: 16px;
+  --fm-border-strength: 1px;
+  --fm-shadow-card: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --fm-glass-blur: 12px;
+
+  /* Cards */
+  --fm-card-radius: 12px;
+  --fm-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --fm-card-hover-lift: -6px;
+  --fm-card-title-lines: 2;
+  --fm-card-overlay-strength: 0.7;
+
+  /* Header */
+  --fm-header-height: 68px;
+  --fm-header-logo-height: 36px;
+
+  /* Hero */
+  --fm-hero-height: 520px;
+  --fm-hero-gradient-strength: 0.85;
+  --fm-hero-backdrop-darkness: 0.4;
+
+  /* Buttons */
+  --fm-btn-primary-bg: #E50914;
+  --fm-btn-primary-text: #FFFFFF;
+  --fm-btn-radius: 8px;
+  --fm-btn-height: 42px;
+  --fm-btn-padding: 0 20px;
+  --fm-btn-hover-intensity: 1.05;
+
+  /* Motion */
+  --fm-motion-speed: 250ms;
+  --fm-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Responsive Scales */
+  --fm-scale-mobile: 0.88;
+  --fm-scale-tablet: 0.94;
+  --fm-scale-desktop: 1.0;
+}
+
+/* Light Theme Overrides */
+html.fm-theme-light, [data-fm-theme='light'] {
+  --fm-color-bg-page: #F8FAFC;
+  --fm-color-bg-surface: #FFFFFF;
+  --fm-color-bg-elevated: #F1F5F9;
+  --fm-color-text-primary: #0F172A;
+  --fm-color-text-secondary: #475569;
+  --fm-color-text-muted: #94A3B8;
+  --fm-color-border: #E2E8F0;
+  --fm-shadow-card: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --fm-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+

@@ -1,0 +1,55 @@
+{
+    "id": "favorite-multimedia-theme",
+    "name": "Favorite Multimedia Theme",
+    "slug": "favorite-multimedia-theme",
+    "version": "1.0.2",
+    "description": "Professional unified Video and Music streaming frontend experience for Favorite CMS.",
+    "author": "Favorite CMS Team",
+    "license": "Proprietary / Builtin",
+    "requires_plugin": "favorite-multimedia",
+    "minimum_plugin_version": "1.0.6",
+    "theme_schema_version": "1.0.0",
+    "screenshot": "screenshot.png",
+    "menu_locations": {
+        "primary": "Primary Header Navigation",
+        "footer": "Footer Navigation"
+    },
+    "regions": [
+        {
+            "id": "sidebar-primary",
+            "name": "Primary Sidebar",
+            "description": "Sidebar displayed alongside content."
+        },
+        {
+            "id": "footer-1",
+            "name": "Footer Column",
+            "description": "Footer area."
+        }
+    ],
+    "sections": [
+        {
+            "id": "hero",
+            "name": "Multimedia Hero",
+            "description": "Featured titles banner showcase.",
+            "enabled": true
+        },
+        {
+            "id": "continue-watching",
+            "name": "Continue Watching",
+            "description": "User in-progress resume shelf.",
+            "enabled": true
+        },
+        {
+            "id": "trending",
+            "name": "Trending Titles",
+            "description": "Trending movies and series.",
+            "enabled": true
+        },
+        {
+            "id": "music-spotlight",
+            "name": "Music Spotlight",
+            "description": "Featured albums and songs.",
+            "enabled": true
+        }
+    ]
+}
