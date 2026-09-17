@@ -268,7 +268,6 @@ class FavoriteMultimediaMembershipAndMenuTest extends TestCase
         $adminOnlyRoutes = [
             'multimedia-settings',
             'multimedia-access',
-            'multimedia-analytics',
             'multimedia-moderation',
             'multimedia-storage',
             'multimedia-processing',
@@ -278,6 +277,7 @@ class FavoriteMultimediaMembershipAndMenuTest extends TestCase
         foreach ($adminOnlyRoutes as $adminRoute) {
             $this->assertArrayNotHasKey($adminRoute, $visible, "Creator visible submenus must not contain admin route: {$adminRoute}");
         }
+        $this->assertArrayHasKey('multimedia-analytics', $visible, 'Author must see My Analytics');
     }
 
     public function testTopLevelMenuRoutesCreatorsDirectlyToMySubmissions(): void

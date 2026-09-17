@@ -20,7 +20,7 @@ use FavoriteCMS\Multimedia\Theme\ThemeManager;
 
 final class FavoriteMultimediaPlugin
 {
-    public const VERSION = '1.0.7';
+    public const VERSION = '1.0.8';
 
     public const TABLES = [
         'multimedia_genres',
@@ -186,6 +186,17 @@ final class FavoriteMultimediaPlugin
             \FavoriteCMS\Core\Hook::addAction('frontend_head', function (): void {
                 echo ThemeManager::getInstance()->renderHeadTokens();
             });
+        }
+
+        // Ensure Multimedia Theme path is NEVER registered globally on Engine boot.
+        // Active theme resolution is strictly isolated to prevent cross-theme template pollution.
+        \FavoriteCMS\Multimedia\Theme\ThemeShellService::purgeGlobalTemplatePathPollution();
+
+        \FavoriteCMS\Multimedia\Theme\ThemeShellService::wrapHumanFacingRoutes();
+        if (function_exists('add_action')) {
+            add_action('init', static function (): void {
+                \FavoriteCMS\Multimedia\Theme\ThemeShellService::wrapHumanFacingRoutes();
+            }, 20);
         }
 
         // Register default permissions if DB is ready
@@ -556,7 +567,7 @@ final class FavoriteMultimediaPlugin
                 }
 
                 // Creator Navigation for Authors
-                $menus['multimedia']['title'] = new MultimediaSidebarTitle('Multimedia', 'My Multimedia');
+                $menus['multimedia']['title'] = new MultimediaSidebarTitle('My Multimedia', 'My Submissions');
 
                 $rawSubmenus = $menus['multimedia']['submenus'] ?? [];
                 if ($rawSubmenus instanceof \FavoriteCMS\Multimedia\Navigation\MultimediaSubmenuCollection) {
@@ -568,7 +579,7 @@ final class FavoriteMultimediaPlugin
                 }
 
                 $visibleSubmenus = [];
-                // 1. My Multimedia (always primary for creators)
+                // 1. My Submissions (accessible via getVisible() and direct slug routing; omitted from layout iteration to prevent duplicate child links)
                 $visibleSubmenus['multimedia-my-submissions'] = [
                     'slug'       => 'multimedia-my-submissions',
                     'title'      => 'My Submissions',
@@ -633,6 +644,16 @@ final class FavoriteMultimediaPlugin
                         'title'      => 'Add Playlist',
                         'handler'    => is_array($allSubmenus['multimedia-playlists'] ?? null) ? ($allSubmenus['multimedia-playlists']['handler'] ?? null) : null,
                         'capability' => MultimediaPermission::CREATE,
+                    ];
+                }
+
+                // 8. My Analytics
+                if (MultimediaPermission::can(MultimediaPermission::VIEW_ANALYTICS, $user)) {
+                    $visibleSubmenus['multimedia-analytics'] = [
+                        'slug'       => 'multimedia-analytics',
+                        'title'      => 'My Analytics',
+                        'handler'    => is_array($allSubmenus['multimedia-analytics'] ?? null) ? ($allSubmenus['multimedia-analytics']['handler'] ?? null) : null,
+                        'capability' => MultimediaPermission::VIEW_ANALYTICS,
                     ];
                 }
 

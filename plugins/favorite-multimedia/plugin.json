@@ -1,7 +1,7 @@
 {
     "id": "favorite-multimedia",
     "name": "Favorite Multimedia",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "description": "A complete multimedia management system for Movies, Web Series, Songs, and Audio Playlists for Favorite CMS.",
     "author": "Favorite CMS Team",
     "requires_php": "8.1.0",

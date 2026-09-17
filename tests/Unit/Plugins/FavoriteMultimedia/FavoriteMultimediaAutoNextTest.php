@@ -535,14 +535,14 @@ class FavoriteMultimediaAutoNextTest extends TestCase
         $this->assertSame('Track 2', $data['title']);
     }
 
-    // 20. Version constant equals 1.0.6
+    // 20. Version constant equals 1.0.8
     public function testScenario20_PluginVersionConstantIs106(): void
     {
-        $this->assertSame('1.0.7', FavoriteMultimediaPlugin::VERSION);
+        $this->assertSame('1.0.8', FavoriteMultimediaPlugin::VERSION);
 
         $pluginJsonPath = APP_ROOT . '/plugins/favorite-multimedia/plugin.json';
         $this->assertFileExists($pluginJsonPath);
         $json = json_decode(file_get_contents($pluginJsonPath), true);
-        $this->assertSame('1.0.7', $json['version'] ?? '');
+        $this->assertSame('1.0.8', $json['version'] ?? '');
     }
 }

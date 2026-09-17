@@ -253,7 +253,7 @@ class FavoriteMultimediaFinalClosureTest extends TestCase
 
         $this->assertSame('favorite-multimedia', $meta['id']);
         $this->assertSame('Favorite Multimedia', $meta['name']);
-        $this->assertSame('1.0.7', $meta['version']);
+        $this->assertSame('1.0.8', $meta['version']);
         $this->assertSame('plugin.php', $meta['entry_point']);
         $this->assertTrue($meta['valid']);
         $this->assertTrue($meta['compatible']);

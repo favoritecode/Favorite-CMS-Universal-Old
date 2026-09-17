@@ -663,7 +663,7 @@ class FavoriteMultimediaLockedAccessMatrixTest extends TestCase
         $menus = $ref->getValue();
         $this->assertArrayHasKey('multimedia', $menus);
         $this->assertInstanceOf(MultimediaSidebarTitle::class, $menus['multimedia']['title']);
-        $this->assertEquals('My Multimedia', $menus['multimedia']['title']->childText);
+        $this->assertEquals('My Submissions', $menus['multimedia']['title']->childText);
 
         // 5. Moderator: filtered submenus (no genres, artists, access, settings)
         $this->setCurrentUser($this->getUser(4));

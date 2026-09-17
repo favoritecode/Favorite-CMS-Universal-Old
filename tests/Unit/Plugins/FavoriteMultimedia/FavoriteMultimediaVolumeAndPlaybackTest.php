@@ -479,14 +479,14 @@ class FavoriteMultimediaVolumeAndPlaybackTest extends TestCase
 
     public function test11ReleaseVersionMatches107AcrossAllFiles(): void
     {
-        $this->assertEquals('1.0.7', FavoriteMultimediaPlugin::VERSION);
+        $this->assertEquals('1.0.8', FavoriteMultimediaPlugin::VERSION);
 
         $jsonPath = APP_ROOT . '/plugins/favorite-multimedia/plugin.json';
         $this->assertFileExists($jsonPath);
         $json = json_decode((string)file_get_contents($jsonPath), true);
-        $this->assertEquals('1.0.7', $json['version'] ?? '');
+        $this->assertEquals('1.0.8', $json['version'] ?? '');
 
         $pluginPhp = (string)file_get_contents(APP_ROOT . '/plugins/favorite-multimedia/plugin.php');
-        $this->assertMatchesRegularExpression('/Version:\s*1\.0\.7/', $pluginPhp);
+        $this->assertMatchesRegularExpression('/Version:\s*1\.0\.8/', $pluginPhp);
     }
 }

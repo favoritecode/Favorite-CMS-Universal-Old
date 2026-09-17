@@ -26,30 +26,13 @@ $accessLevel = (string)($membership['access'] ?? 'Standard');
 $checkoutUrl = $membership['checkout_url'] ?? null;
 $manageUrl   = $membership['manage_url'] ?? null;
 
-if (!empty($GLOBALS['fm_canonical_header_rendered'])) {
-    ?>
-    <div class="fm-main-content">
-        <!-- Canonical header already rendered by layout -->
-    </div>
-    <?php
-}
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($metaTitle ?? 'Membership — Favorite Multimedia', ENT_QUOTES, 'UTF-8'); ?></title>
-    <link rel="stylesheet" href="/plugins/favorite-multimedia/assets/css/multimedia-player.css">
-    <link rel="stylesheet" href="/plugins/favorite-multimedia/assets/css/theme/theme-tokens.css">
-    <link rel="stylesheet" href="/plugins/favorite-multimedia/assets/css/theme/multimedia-frontend.css?v=1.0.7">
-    <?php echo $themeManager->renderHeadTokens(); ?>
-    <style>
-        .fm-membership-wrap {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 40px 16px 80px;
-        }
+<style>
+    .fm-membership-wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 40px 16px 80px;
+    }
         .fm-membership-card {
             background: var(--fm-color-surface, #1e293b);
             border: 1px solid var(--fm-color-border, #334155);
@@ -151,19 +134,9 @@ if (!empty($GLOBALS['fm_canonical_header_rendered'])) {
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.3);
             color: #93c5fd;
-        }
     </style>
-</head>
-<body class="fm-theme-body">
 
-    <!-- Global Responsive Header -->
-    <?php
-    $currentNav = 'membership';
-    include $componentsDir . '/header.php';
-    ?>
-
-    <main class="fm-main-content">
-        <div class="fm-membership-wrap">
+    <section class="membership-page fm-membership-wrap">
 
             <div style="margin-bottom: 32px;">
                 <h1 style="font-family: var(--fm-font-heading); font-size: 2.2rem; font-weight: 800; margin-bottom: 6px; color: var(--fm-color-text);">
@@ -296,12 +269,4 @@ if (!empty($GLOBALS['fm_canonical_header_rendered'])) {
                 </div>
             <?php endif; ?>
 
-        </div>
-    </main>
-
-    <!-- Mobile Bottom Navigation -->
-    <?php include $componentsDir . '/mobile-nav.php'; ?>
-
-    <script src="/plugins/favorite-multimedia/assets/js/frontend/multimedia-frontend.js?v=1.0.7"></script>
-</body>
-</html>
+    </section>

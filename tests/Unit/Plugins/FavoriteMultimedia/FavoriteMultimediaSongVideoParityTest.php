@@ -758,6 +758,6 @@ class FavoriteMultimediaSongVideoParityTest extends TestCase
         $manifestPath = APP_ROOT . '/plugins/favorite-multimedia/plugin.json';
         $this->assertFileExists($manifestPath);
         $data = json_decode((string)file_get_contents($manifestPath), true);
-        $this->assertSame('1.0.7', $data['version']);
+        $this->assertSame('1.0.8', $data['version']);
     }
 }

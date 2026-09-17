@@ -774,6 +774,7 @@ class MultimediaAdminController
     // 4. Seasons CRUD
     public function seasons(Request $request): Response|string
     {
+        $user = $this->currentUser();
         $action = (string)$request->post('action', $request->get('action', 'index'));
 
         if ($request->method() === 'POST') {

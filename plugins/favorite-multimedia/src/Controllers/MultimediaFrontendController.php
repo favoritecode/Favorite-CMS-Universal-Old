@@ -978,14 +978,21 @@ class MultimediaFrontendController
         $membership = \FavoriteCMS\Multimedia\Integrations\FavoriteDigitalAdapter::getMembershipDetails($user);
         $payAvailable = \FavoriteCMS\Multimedia\Integrations\FavoritePayAdapter::isAvailable();
 
+        $title = 'Membership — ' . Setting::get('general', 'site_name', 'Favorite CMS');
         $html = $this->renderView('membership', [
-            'metaTitle'    => 'Membership — ' . Setting::get('general', 'site_name', 'Favorite CMS'),
+            'metaTitle'    => $title,
             'user'         => $user,
             'membership'   => $membership,
             'payAvailable' => $payAvailable,
         ]);
 
-        return Response::make($html, 200);
+        $wrapped = \FavoriteCMS\Multimedia\Theme\ThemeShellService::renderPageInActiveTheme($html, $title, [
+            'user'         => $user,
+            'membership'   => $membership,
+            'payAvailable' => $payAvailable,
+        ]);
+
+        return Response::make($wrapped, 200);
     }
 
     private function renderView(string $viewName, array $data = []): string

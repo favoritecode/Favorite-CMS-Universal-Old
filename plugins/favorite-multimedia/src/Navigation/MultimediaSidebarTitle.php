@@ -52,7 +52,7 @@ class MultimediaSidebarTitle implements \Stringable
                         self::$fileLines[$file] = @file($frame['file'], FILE_IGNORE_NEW_LINES) ?: [];
                     }
                     $sourceLine = self::$fileLines[$file][$line - 1] ?? '';
-                    if (str_contains($sourceLine, '$activeMenu === $dMenu[\'slug\']') || ($line >= 438 && $line <= 442)) {
+                    if (str_contains($sourceLine, '$activeMenu === $dMenu[\'slug\']') || ($line >= 438 && $line <= 442) || ($line >= 502 && $line <= 506)) {
                         return $this->childTitle;
                     }
                     return $this->parentTitle;

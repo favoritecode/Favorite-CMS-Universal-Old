@@ -38,12 +38,56 @@ class MultimediaSubmenuCollection implements ArrayAccess, IteratorAggregate, Cou
 
     public function offsetExists(mixed $offset): bool
     {
-        return isset($this->visibleSubmenus[$offset]) || isset($this->hiddenSubmenus[$offset]);
+        if (isset($this->visibleSubmenus[$offset]) || isset($this->hiddenSubmenus[$offset])) {
+            return true;
+        }
+        if (is_string($offset)) {
+            $base = explode('?', $offset, 2)[0];
+            if (isset($this->visibleSubmenus[$base]) || isset($this->hiddenSubmenus[$base])) {
+                return true;
+            }
+            foreach ($this->visibleSubmenus as $k => $v) {
+                if (is_string($k) && explode('?', $k, 2)[0] === $base) {
+                    return true;
+                }
+            }
+            foreach ($this->hiddenSubmenus as $k => $v) {
+                if (is_string($k) && explode('?', $k, 2)[0] === $base) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public function offsetGet(mixed $offset): mixed
     {
-        return $this->visibleSubmenus[$offset] ?? $this->hiddenSubmenus[$offset] ?? null;
+        if (isset($this->visibleSubmenus[$offset])) {
+            return $this->visibleSubmenus[$offset];
+        }
+        if (isset($this->hiddenSubmenus[$offset])) {
+            return $this->hiddenSubmenus[$offset];
+        }
+        if (is_string($offset)) {
+            $base = explode('?', $offset, 2)[0];
+            if (isset($this->visibleSubmenus[$base])) {
+                return $this->visibleSubmenus[$base];
+            }
+            if (isset($this->hiddenSubmenus[$base])) {
+                return $this->hiddenSubmenus[$base];
+            }
+            foreach ($this->visibleSubmenus as $k => $v) {
+                if (is_string($k) && explode('?', $k, 2)[0] === $base) {
+                    return $v;
+                }
+            }
+            foreach ($this->hiddenSubmenus as $k => $v) {
+                if (is_string($k) && explode('?', $k, 2)[0] === $base) {
+                    return $v;
+                }
+            }
+        }
+        return null;
     }
 
     public function offsetSet(mixed $offset, mixed $value): void
@@ -67,7 +111,16 @@ class MultimediaSubmenuCollection implements ArrayAccess, IteratorAggregate, Cou
 
     public function getIterator(): Traversable
     {
-        return new ArrayIterator($this->visibleSubmenus);
+        // When iterated in layout.php line 505, line 504 already renders My Submissions as the primary child.
+        // Omit multimedia-my-submissions from layout iteration to prevent duplicate "My Submissions" links in the sidebar.
+        $iterItems = [];
+        foreach ($this->visibleSubmenus as $k => $v) {
+            if ($k === 'multimedia-my-submissions' || (is_array($v) && ($v['slug'] ?? '') === 'multimedia-my-submissions')) {
+                continue;
+            }
+            $iterItems[$k] = $v;
+        }
+        return new ArrayIterator($iterItems);
     }
 
     public function getVisible(): array

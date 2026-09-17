@@ -3,7 +3,7 @@
  * Plugin Name: Favorite Multimedia
  * Plugin URI: https://github.com/favoritecode/Favorite-CMS-Universal
  * Description: A complete multimedia management system for Movies, Web Series, Songs, and Audio Playlists for Favorite CMS.
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: Favorite CMS Team
  */
 

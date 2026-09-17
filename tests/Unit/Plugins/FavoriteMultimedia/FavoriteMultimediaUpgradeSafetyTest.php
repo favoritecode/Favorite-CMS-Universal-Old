@@ -111,8 +111,8 @@ class FavoriteMultimediaUpgradeSafetyTest extends TestCase
         $this->assertSame('7', Setting::get('multimedia', 'trending_window_days'));
         $this->assertSame('10', Setting::get('multimedia', 'max_discovery_items'));
         $this->assertSame('auto_approve', Setting::get('multimedia', 'review_moderation_mode'));
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'installed_version'));
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'installed_version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'version'));
     }
 
     public function testUpgradeFromV104WithoutDeactivationReactivation(): void
@@ -135,8 +135,8 @@ class FavoriteMultimediaUpgradeSafetyTest extends TestCase
         $plugin = FavoriteMultimediaPlugin::bootstrap($this->app);
 
         // Verify self-healing upgraded version and bootstrapped missing trusted_embed_domains
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'installed_version'));
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'installed_version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'version'));
         $this->assertSame('', Setting::get('multimedia', 'trusted_embed_domains'));
         // Verify custom pre-existing setting is preserved
         $this->assertSame('#ff5500', Setting::get('multimedia', 'player_theme_color'));
@@ -152,7 +152,7 @@ class FavoriteMultimediaUpgradeSafetyTest extends TestCase
         FavoriteMultimediaPlugin::reset();
         $plugin = FavoriteMultimediaPlugin::bootstrap($this->app);
 
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'installed_version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'installed_version'));
         $this->assertSame('', Setting::get('multimedia', 'trusted_embed_domains'));
     }
 
@@ -174,7 +174,7 @@ class FavoriteMultimediaUpgradeSafetyTest extends TestCase
         // Ensure custom domains were NOT overwritten by default ''
         $this->assertSame($customDomains, Setting::get('multimedia', 'trusted_embed_domains'));
         $this->assertSame('#123456', Setting::get('multimedia', 'player_theme_color'));
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'installed_version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'installed_version'));
         // Missing default settings should still be seeded
         $this->assertSame('yes', Setting::get('multimedia', 'enable_downloads'));
     }
@@ -219,7 +219,7 @@ class FavoriteMultimediaUpgradeSafetyTest extends TestCase
         Setting::clearCache();
         FavoriteMultimediaPlugin::bootstrap($this->app);
 
-        $this->assertSame('1.0.7', Setting::get('multimedia', 'installed_version'));
+        $this->assertSame('1.0.8', Setting::get('multimedia', 'installed_version'));
 
         // 3. Admin visits Multimedia -> Settings and adds rasta428jem.com
         Setting::set('multimedia', 'trusted_embed_domains', 'rasta428jem.com');

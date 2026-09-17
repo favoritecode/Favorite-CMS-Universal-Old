@@ -89,7 +89,7 @@ class FavoriteMultimediaTest extends TestCase
 
         $this->assertSame('favorite-multimedia', $meta['id']);
         $this->assertSame('Favorite Multimedia', $meta['name']);
-        $this->assertSame('1.0.7', $meta['version']);
+        $this->assertSame('1.0.8', $meta['version']);
         $this->assertSame('plugin.php', $meta['entry_point']);
         $this->assertTrue($meta['valid'], 'Plugin manifest must be recognized as valid by Core PluginManager');
         $this->assertTrue($meta['compatible'], 'Plugin must be compatible with PHP environment');

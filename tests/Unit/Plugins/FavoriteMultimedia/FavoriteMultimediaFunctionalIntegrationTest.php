@@ -649,6 +649,6 @@ class FavoriteMultimediaFunctionalIntegrationTest extends TestCase
         $pluginJson = json_decode(file_get_contents(APP_ROOT . '/plugins/favorite-multimedia/plugin.json'), true);
 
         $this->assertSame('1.0.2', $themeJson['version'], 'Theme version must strictly remain 1.0.2');
-        $this->assertSame('1.0.7', $pluginJson['version'], 'Plugin version must strictly remain 1.0.7');
+        $this->assertSame('1.0.8', $pluginJson['version'], 'Plugin version must strictly remain 1.0.8');
     }
 }
