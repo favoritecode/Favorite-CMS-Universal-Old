@@ -59,7 +59,7 @@ class PluginFoundationTest extends TestCase
 
         $this->assertSame('favorite-digital', $meta['id']);
         $this->assertSame('Favorite Digital', $meta['name']);
-        $this->assertSame('1.0.1', $meta['version']);
+        $this->assertSame('1.0.6', $meta['version']);
         $this->assertSame('Favorite CMS Team', $meta['author']);
         $this->assertSame('plugin.php', $meta['entry_point']);
         $this->assertTrue($meta['valid']);

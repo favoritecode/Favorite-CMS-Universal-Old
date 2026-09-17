@@ -15,7 +15,14 @@ declare(strict_types=1);
 
 $sourceDir = dirname(__DIR__);
 $outputDir = $sourceDir . '/release';
-$zipName = 'Favorite-CMS-Universal.zip';
+
+$appVersion = '1.0.14';
+$bootstrapPath = $sourceDir . '/bootstrap.php';
+if (file_exists($bootstrapPath) && preg_match("/define\(\s*['\"]APP_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", (string)file_get_contents($bootstrapPath), $m)) {
+    $appVersion = $m[1];
+}
+
+$zipName = $argv[1] ?? "Favorite-CMS-Universal-v{$appVersion}.zip";
 $finalZipPath = $outputDir . '/' . $zipName;
 $rootPrefix = 'Favorite-CMS-Universal';
 $previousArchives = array_map(static fn (string $path): string => 'release/' . basename($path), glob($outputDir . '/*.zip') ?: []);
@@ -173,11 +180,6 @@ foreach ($filesToCopy as $file) {
 }
 
 // 8b. Add authoritative release metadata manifest
-$appVersion = '1.0.12';
-$bootstrapPath = $sourceDir . '/bootstrap.php';
-if (file_exists($bootstrapPath) && preg_match("/define\(\s*['\"]APP_VERSION['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/", (string)file_get_contents($bootstrapPath), $m)) {
-    $appVersion = $m[1];
-}
 
 $releaseMetadata = [
     'product'          => 'Favorite CMS Universal',
@@ -310,6 +312,12 @@ if (!$hasPubIndex || !$hasPubHtaccess) {
 $zipSize = filesize($finalZipPath);
 $zipHash = hash_file('sha256', $finalZipPath);
 file_put_contents($finalZipPath . '.sha256', $zipHash . '  ' . $zipName . "\n");
+
+if ($zipName !== 'Favorite-CMS-Universal.zip') {
+    $aliasZip = $outputDir . '/Favorite-CMS-Universal.zip';
+    copy($finalZipPath, $aliasZip);
+    file_put_contents($aliasZip . '.sha256', $zipHash . "  Favorite-CMS-Universal.zip\n");
+}
 
 echo "==================================================\n";
 echo "RELEASE PACKAGE SUCCESSFULLY GENERATED!\n";

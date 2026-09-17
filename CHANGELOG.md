@@ -3,8 +3,31 @@
 All notable changes to **Favorite CMS Universal** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.14] - 2026-09-18
+
+### Fixed
+- **Generic Duplicate Parent Submenu Suppression in Admin Layout**:
+  - Improved dynamic plugin admin menu rendering in `resources/views/admin/layout.php`.
+  - Suppressed automatic duplicate parent submenu link when a registered plugin already provides an explicit landing submenu item matching the parent slug (`isset($dMenu['submenus'][$dMenu['slug']]) || in_array($dMenu['slug'], $subSlugs, true)`).
+  - Preserved automatic parent submenu link generation for plugins with distinct submenu slugs (e.g., Favorite Pay).
+  - Ensured complete independence without hardcoding plugin names or slugs into Core.
+
+## [1.0.13] - 2026-09-15
 ## [1.0.13] - 2026-09-16
 
+### Fixed & Security
+- **Moderator Post Deletion Protection**:
+  - Enforced strict authorization preventing Moderator from trashing, restoring, or permanently deleting other users' posts.
+  - Added `canDeletePost(mixed $post): bool` and `canDeleteOtherPosts(): bool` methods to authoritative `User` model.
+  - Explicitly decoupled `canModeratePosts()` and `canEditOtherPosts()` from post deletion permissions.
+  - Secured `PostController` single-item and bulk operations (`trash`, `restore`, `delete`) to verify post deletion permissions.
+  - Updated administrative posts list UI (`resources/views/admin/posts/index.php`) to conditionally hide destructive row actions ("Trash", "Restore", "Delete Permanently") and bulk action dropdown options for users without permission to delete other users' posts.
+- **Author Admin Dashboard 500 Fix & Scoping**:
+  - Fixed 500 Internal Server Error encountered when accessing `/admin` as an Author.
+  - Scoped dashboard post metrics in `DashboardController` to the authenticated Author's own posts rather than site-wide counts.
+  - Audited and capability-gated administrative queries (Pages, Comments, Users) so that unpermitted queries and metrics are not evaluated or exposed.
+  - Passed resolved `$currentUser` to dashboard view and updated `resources/views/admin/dashboard.php` to render appropriate role-scoped cards ("My Posts", "Media", "My Account"), hide administrative action buttons (`+ Add an About Page`, `Customize Theme`), and safely link post titles to public URLs when editing is not authorized.
+  - Added regression test scenarios 16–20 in `RolePermissionMatrixTest.php` covering Moderator deletion restrictions and Author dashboard rendering and access restrictions.
 ### Added & Security
 - **Authoritative 6-Role Permission Matrix Alignment**:
   - Aligned core permission matrix across all 6 roles (Super Admin, Admin, Editor, Moderator, Author, Subscriber) via database migration `017_align_role_permission_matrix.php`.

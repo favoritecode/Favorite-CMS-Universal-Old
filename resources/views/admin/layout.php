@@ -811,7 +811,12 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                         </a>
                         <?php if ($hasSub): ?>
                             <ul class="wp-submenu" id="<?php echo $subId; ?>">
-                                <li><a href="<?php echo $menuUrl; ?>" class="<?php echo $activeMenu === $dMenu['slug'] ? 'active' : ''; ?>"><?php echo htmlspecialchars($dMenu['title'], ENT_QUOTES, 'UTF-8'); ?></a></li>
+                                <?php
+                                $hasParentSub = isset($dMenu['submenus'][$dMenu['slug']]) || in_array($dMenu['slug'], $subSlugs, true);
+                                if (!$hasParentSub):
+                                ?>
+                                    <li><a href="<?php echo $menuUrl; ?>" class="<?php echo $activeMenu === $dMenu['slug'] ? 'active' : ''; ?>"><?php echo htmlspecialchars($dMenu['title'], ENT_QUOTES, 'UTF-8'); ?></a></li>
+                                <?php endif; ?>
                                 <?php foreach ($dMenu['submenus'] as $sub): ?>
                                     <li><a href="/admin/page/<?php echo htmlspecialchars($sub['slug'], ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo $activeMenu === $sub['slug'] ? 'active' : ''; ?>"><?php echo htmlspecialchars($sub['title'], ENT_QUOTES, 'UTF-8'); ?></a></li>
                                 <?php endforeach; ?>
@@ -937,7 +942,11 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
             var itemType = options.itemType || 'item';
 
             var confirmMsg = null;
-            if (action === 'delete') {
+            if (options.confirmMessages && options.confirmMessages[action]) {
+                confirmMsg = typeof options.confirmMessages[action] === 'function'
+                    ? options.confirmMessages[action](count, itemType)
+                    : options.confirmMessages[action].replace('{count}', count);
+            } else if (action === 'delete') {
                 confirmMsg = itemType === 'plugin'
                     ? 'Are you sure you want to delete and uninstall ' + count + ' ' + (count > 1 ? 'plugins' : 'plugin') + '? This will remove plugin files and data.'
                     : 'Are you sure you want to permanently delete ' + count + ' ' + itemType + (count > 1 ? 's' : '') + '? This action cannot be undone.';
@@ -951,6 +960,12 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                 confirmMsg = 'Are you sure you want to suspend ' + count + ' ' + itemType + (count > 1 ? 's' : '') + '?';
             } else if (action === 'spam') {
                 confirmMsg = 'Are you sure you want to mark ' + count + ' ' + itemType + (count > 1 ? 's' : '') + ' as spam?';
+            } else if (action === 'archive') {
+                confirmMsg = 'Are you sure you want to archive ' + count + ' ' + itemType + (count > 1 ? 's' : '') + '?';
+            } else if (action === 'cancel') {
+                confirmMsg = 'Are you sure you want to cancel ' + count + ' ' + itemType + (count > 1 ? 's' : '') + '?';
+            } else if (action === 'expire') {
+                confirmMsg = 'Are you sure you want to expire ' + count + ' ' + itemType + (count > 1 ? 's' : '') + '?';
             }
 
             if (confirmMsg && !confirm(confirmMsg)) {
