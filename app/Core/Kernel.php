@@ -321,10 +321,38 @@ class Kernel
         }
         if ($method !== 'GET' && $method !== 'HEAD') {
             $submitted = $request->post('_token', '');
+            if ($submitted === '') {
+                $rawBody = (string)file_get_contents('php://input');
+                $json = json_decode($rawBody, true);
+                if (is_array($json) && !empty($json['_token'])) {
+                    $submitted = (string)$json['_token'];
+                }
+            }
             $stored = $_SESSION['_token'] ?? '';
             if (!is_string($submitted) || !is_string($stored) || $stored === '' || !hash_equals($stored, $submitted)) {
                 return Response::make('Invalid security token.', 403);
             }
+        }
+
+        // Admin Appearance Toggle (Authenticated user, CSRF validated, self-preference only)
+        if ($path === '/admin/appearance/toggle') {
+            if ($method !== 'POST') {
+                return Response::make('Method not allowed.', 405)->header('Allow', 'POST');
+            }
+            if (!$currentUser || !$currentUser->isActive()) {
+                return Response::make('Unauthorized.', 403);
+            }
+            $rawTheme = (string)$request->post('theme', '');
+            if ($rawTheme === '') {
+                $json = json_decode((string)file_get_contents('php://input'), true);
+                if (is_array($json) && !empty($json['theme'])) {
+                    $rawTheme = (string)$json['theme'];
+                }
+            }
+            $theme = $rawTheme === 'dark' ? 'dark' : 'light';
+            \FavoriteCMS\Models\Setting::set('admin_appearance', 'user_' . $currentUser->id, $theme, 'string');
+            $_SESSION['admin_theme'] = $theme;
+            return Response::json(['success' => true, 'theme' => $theme]);
         }
 
         if ($path === '/admin' || $path === '/admin/') {
@@ -490,6 +518,7 @@ class Kernel
                 '/admin/menus/item/add'    => $ctrl->addItem($request),
                 '/admin/menus/item/delete' => $ctrl->deleteItem($request),
                 '/admin/menus/location'    => $ctrl->saveLocation($request),
+                '/admin/menus/save'        => $ctrl->saveMenu($request),
                 '/admin/menus/delete'      => $ctrl->deleteMenu($request),
                 default                    => Response::redirect('/admin/menus'),
             };
@@ -752,6 +781,12 @@ class Kernel
             $userModel = User::find((int)$user->id);
             if ($userModel) {
                 $_SESSION['auth_user_role'] = $userModel->getPrimaryRoleSlug();
+            }
+
+            // Restore authoritative admin appearance preference
+            $savedAdminTheme = \FavoriteCMS\Models\Setting::get('admin_appearance', 'user_' . $user->id, null);
+            if ($savedAdminTheme === 'dark' || $savedAdminTheme === 'light') {
+                $_SESSION['admin_theme'] = $savedAdminTheme;
             }
 
             $db->execute("UPDATE `users` SET `last_login_at` = ? WHERE `id` = ?", [date('Y-m-d H:i:s'), $user->id]);

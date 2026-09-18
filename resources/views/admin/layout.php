@@ -26,13 +26,55 @@ unset($_SESSION['flash_success'], $_SESSION['flash_error']);
 
 $activeMenu = $activeMenu ?? 'dashboard';
 $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url('') : '';
+
+// Resolve Admin Appearance Preference with deterministic precedence:
+// 1. Authoritative Core Setting (for authenticated user)
+// 2. Session cache
+// 3. Client localStorage / default 'light'
+$adminTheme = 'light';
+if ($currentAdminUser) {
+    try {
+        $savedTheme = class_exists(\FavoriteCMS\Models\Setting::class)
+            ? \FavoriteCMS\Models\Setting::get('admin_appearance', 'user_' . $currentAdminUser->id, null)
+            : null;
+        if ($savedTheme === 'dark' || $savedTheme === 'light') {
+            $adminTheme = $savedTheme;
+        } elseif (!empty($_SESSION['admin_theme']) && in_array($_SESSION['admin_theme'], ['dark', 'light'], true)) {
+            $adminTheme = $_SESSION['admin_theme'];
+        }
+    } catch (\Throwable $e) {
+        $adminTheme = $_SESSION['admin_theme'] ?? 'light';
+    }
+} elseif (!empty($_SESSION['admin_theme']) && in_array($_SESSION['admin_theme'], ['dark', 'light'], true)) {
+    $adminTheme = $_SESSION['admin_theme'];
+}
+if ($adminTheme !== 'dark') {
+    $adminTheme = 'light';
+}
+$_SESSION['admin_theme'] = $adminTheme;
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-admin-theme="<?php echo $adminTheme; ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($pageTitle ?? 'Admin', ENT_QUOTES, 'UTF-8'); ?> &lsaquo; <?php echo htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8'); ?> &mdash; Favorite CMS</title>
+    <script>
+    (function() {
+        try {
+            var serverTheme = <?php echo json_encode($adminTheme); ?>;
+            var isAuth = <?php echo $currentAdminUser ? 'true' : 'false'; ?>;
+            if (isAuth) {
+                localStorage.setItem('favorite_admin_theme', serverTheme);
+            } else {
+                var localTheme = localStorage.getItem('favorite_admin_theme');
+                if (localTheme === 'dark' || localTheme === 'light') {
+                    document.documentElement.setAttribute('data-admin-theme', localTheme);
+                }
+            }
+        } catch (e) {}
+    })();
+    </script>
     <?php if (!empty($siteFaviconUrl)): ?>
         <?php
         $favExt = strtolower(pathinfo(parse_url($siteFaviconUrl, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
@@ -50,26 +92,145 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --wp-dark: #0f172a;
-            --wp-sidebar-bg: #1e293b;
-            --wp-blue: #2563eb;
-            --wp-blue-hover: #1d4ed8;
+            /* Semantic Admin Design Tokens - Light Theme */
+            --admin-bg: #f8fafc;
+            --admin-surface: #ffffff;
+            --admin-surface-elevated: #ffffff;
+            --admin-surface-subtle: #f1f5f9;
+            --admin-border: #e2e8f0;
+            --admin-border-subtle: #cbd5e1;
+            --admin-border-focus: #3b82f6;
+            --admin-text: #0f172a;
+            --admin-text-muted: #64748b;
+            --admin-text-heading: #0f172a;
+            --admin-topbar-bg: #0f172a;
+            --admin-topbar-text: #ffffff;
+            --admin-sidebar-bg: #1e293b;
+            --admin-sidebar-hover: rgba(255,255,255,0.06);
+            --admin-sidebar-text: #cbd5e1;
+            --admin-sidebar-muted: #94a3b8;
+            --admin-sidebar-active: #2563eb;
+            --admin-input-bg: #ffffff;
+            --admin-input-border: #cbd5e1;
+            --admin-input-text: #0f172a;
+            --admin-input-placeholder: #94a3b8;
+            --admin-primary: #2563eb;
+            --admin-primary-hover: #1d4ed8;
+            --admin-secondary-bg: #ffffff;
+            --admin-secondary-hover: #f8fafc;
+            --admin-secondary-border: #cbd5e1;
+            --admin-secondary-text: #0f172a;
+            --admin-danger: #dc2626;
+            --admin-danger-bg: #fee2e2;
+            --admin-danger-border: #fecaca;
+            --admin-danger-text: #991b1b;
+            --admin-success: #16a34a;
+            --admin-success-bg: #f0fdf4;
+            --admin-success-border: #bbf7d0;
+            --admin-success-text: #166534;
+            --admin-warning: #d97706;
+            --admin-warning-bg: #fffbeb;
+            --admin-warning-border: #fde68a;
+            --admin-warning-text: #92400e;
+            --admin-info: #0284c7;
+            --admin-info-bg: #f0f9ff;
+            --admin-info-border: #bae6fd;
+            --admin-info-text: #0369a1;
+            --admin-table-th-bg: #f8fafc;
+            --admin-table-th-text: #334155;
+            --admin-table-row-hover: #f8fafc;
+            --admin-table-row-selected: #eff6ff;
+
+            /* Legacy --wp-* variable mappings for complete backward compatibility */
+            --wp-dark: var(--admin-topbar-bg);
+            --wp-sidebar-bg: var(--admin-sidebar-bg);
+            --wp-blue: var(--admin-primary);
+            --wp-blue-hover: var(--admin-primary-hover);
             --wp-blue-light: #eff6ff;
-            --wp-light: #f8fafc;
-            --wp-border: #e2e8f0;
-            --wp-border-focus: #3b82f6;
-            --wp-text: #0f172a;
-            --wp-text-muted: #64748b;
-            --wp-danger: #dc2626;
-            --wp-success: #16a34a;
-            --wp-warning: #d97706;
-            --wp-info: #0284c7;
+            --wp-light: var(--admin-bg);
+            --wp-border: var(--admin-border);
+            --wp-border-focus: var(--admin-border-focus);
+            --wp-text: var(--admin-text);
+            --wp-text-muted: var(--admin-text-muted);
+            --wp-danger: var(--admin-danger);
+            --wp-success: var(--admin-success);
+            --wp-warning: var(--admin-warning);
+            --wp-info: var(--admin-info);
             --sidebar-width: 220px;
             --radius-sm: 4px;
             --radius-md: 6px;
             --radius-lg: 8px;
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        :root[data-admin-theme="dark"] {
+            /* Semantic Admin Design Tokens - Dark Theme */
+            --admin-bg: #0b1120;
+            --admin-surface: #1e293b;
+            --admin-surface-elevated: #334155;
+            --admin-surface-subtle: #0f172a;
+            --admin-border: #334155;
+            --admin-border-subtle: #475569;
+            --admin-border-focus: #60a5fa;
+            --admin-text: #f1f5f9;
+            --admin-text-muted: #94a3b8;
+            --admin-text-heading: #f8fafc;
+            --admin-topbar-bg: #0b1120;
+            --admin-topbar-text: #f8fafc;
+            --admin-sidebar-bg: #0f172a;
+            --admin-sidebar-hover: rgba(255,255,255,0.08);
+            --admin-sidebar-text: #e2e8f0;
+            --admin-sidebar-muted: #94a3b8;
+            --admin-sidebar-active: #3b82f6;
+            --admin-input-bg: #0f172a;
+            --admin-input-border: #475569;
+            --admin-input-text: #f1f5f9;
+            --admin-input-placeholder: #64748b;
+            --admin-primary: #3b82f6;
+            --admin-primary-hover: #2563eb;
+            --admin-secondary-bg: #1e293b;
+            --admin-secondary-hover: #334155;
+            --admin-secondary-border: #475569;
+            --admin-secondary-text: #f1f5f9;
+            --admin-danger: #ef4444;
+            --admin-danger-bg: rgba(239, 68, 68, 0.15);
+            --admin-danger-border: rgba(239, 68, 68, 0.35);
+            --admin-danger-text: #fca5a5;
+            --admin-success: #22c55e;
+            --admin-success-bg: rgba(34, 197, 94, 0.15);
+            --admin-success-border: rgba(34, 197, 94, 0.35);
+            --admin-success-text: #86efac;
+            --admin-warning: #f59e0b;
+            --admin-warning-bg: rgba(245, 158, 11, 0.15);
+            --admin-warning-border: rgba(245, 158, 11, 0.35);
+            --admin-warning-text: #fcd34d;
+            --admin-info: #38bdf8;
+            --admin-info-bg: rgba(56, 189, 248, 0.15);
+            --admin-info-border: rgba(56, 189, 248, 0.35);
+            --admin-info-text: #7dd3fc;
+            --admin-table-th-bg: #0f172a;
+            --admin-table-th-text: #cbd5e1;
+            --admin-table-row-hover: #1e293b;
+            --admin-table-row-selected: rgba(59, 130, 246, 0.2);
+
+            /* Legacy variable overrides in dark mode */
+            --wp-dark: var(--admin-topbar-bg);
+            --wp-sidebar-bg: var(--admin-sidebar-bg);
+            --wp-blue: var(--admin-primary);
+            --wp-blue-hover: var(--admin-primary-hover);
+            --wp-blue-light: rgba(59, 130, 246, 0.2);
+            --wp-light: var(--admin-bg);
+            --wp-border: var(--admin-border);
+            --wp-border-focus: var(--admin-border-focus);
+            --wp-text: var(--admin-text);
+            --wp-text-muted: var(--admin-text-muted);
+            --wp-danger: var(--admin-danger);
+            --wp-success: var(--admin-success);
+            --wp-warning: var(--admin-warning);
+            --wp-info: var(--admin-info);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -593,6 +754,345 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Admin Theme Toggle Button */
+        .admin-theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            color: #f1f5f9;
+            font-size: 15px;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.15s ease;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .admin-theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+            transform: scale(1.04);
+        }
+        .admin-theme-toggle:focus-visible {
+            outline: 2px solid #60a5fa;
+            outline-offset: 2px;
+        }
+        .admin-theme-toggle .theme-icon-sun,
+        .admin-theme-toggle .theme-icon-moon {
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Dark Mode Component Overrides */
+        [data-admin-theme="dark"] body {
+            background: var(--admin-bg) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .wp-content {
+            background: var(--admin-bg);
+        }
+        [data-admin-theme="dark"] .page-title,
+        [data-admin-theme="dark"] h1,
+        [data-admin-theme="dark"] h2,
+        [data-admin-theme="dark"] h3,
+        [data-admin-theme="dark"] h4,
+        [data-admin-theme="dark"] h5,
+        [data-admin-theme="dark"] h6 {
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] .card,
+        [data-admin-theme="dark"] .form-card,
+        [data-admin-theme="dark"] .plugin-page-card,
+        [data-admin-theme="dark"] .wp-table-wrap {
+            background: var(--admin-surface) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .card-header,
+        [data-admin-theme="dark"] .card-footer {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] .form-control,
+        [data-admin-theme="dark"] .form-select,
+        [data-admin-theme="dark"] input[type="text"],
+        [data-admin-theme="dark"] input[type="password"],
+        [data-admin-theme="dark"] input[type="email"],
+        [data-admin-theme="dark"] input[type="url"],
+        [data-admin-theme="dark"] input[type="number"],
+        [data-admin-theme="dark"] input[type="search"],
+        [data-admin-theme="dark"] input[type="date"],
+        [data-admin-theme="dark"] input[type="time"],
+        [data-admin-theme="dark"] input[type="file"],
+        [data-admin-theme="dark"] select,
+        [data-admin-theme="dark"] textarea {
+            background: var(--admin-input-bg) !important;
+            border-color: var(--admin-input-border) !important;
+            color: var(--admin-input-text) !important;
+        }
+        [data-admin-theme="dark"] .form-control:focus,
+        [data-admin-theme="dark"] .form-select:focus,
+        [data-admin-theme="dark"] input:focus,
+        [data-admin-theme="dark"] select:focus,
+        [data-admin-theme="dark"] textarea:focus {
+            border-color: var(--admin-border-focus) !important;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+        }
+        [data-admin-theme="dark"] .form-group label,
+        [data-admin-theme="dark"] .form-label,
+        [data-admin-theme="dark"] label {
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .description,
+        [data-admin-theme="dark"] .form-text,
+        [data-admin-theme="dark"] .text-muted {
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] table.wp-table th {
+            background: var(--admin-table-th-bg) !important;
+            color: var(--admin-table-th-text) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] table.wp-table td {
+            background: var(--admin-surface) !important;
+            color: var(--admin-text) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] table.wp-table tr:hover td {
+            background: var(--admin-table-row-hover) !important;
+        }
+        [data-admin-theme="dark"] table.wp-table tr.is-selected td {
+            background: var(--admin-table-row-selected) !important;
+        }
+        [data-admin-theme="dark"] .btn-secondary {
+            background: var(--admin-secondary-bg) !important;
+            border-color: var(--admin-secondary-border) !important;
+            color: var(--admin-secondary-text) !important;
+        }
+        [data-admin-theme="dark"] .btn-secondary:hover {
+            background: var(--admin-secondary-hover) !important;
+            border-color: var(--admin-border-focus) !important;
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] .btn-outline-secondary {
+            background: transparent !important;
+            color: var(--admin-text-muted) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] .btn-outline-secondary:hover {
+            background: var(--admin-surface-elevated) !important;
+            color: var(--admin-text-heading) !important;
+            border-color: var(--admin-border-subtle) !important;
+        }
+        [data-admin-theme="dark"] .btn-danger {
+            background: var(--admin-danger-bg) !important;
+            color: var(--admin-danger-text) !important;
+            border-color: var(--admin-danger-border) !important;
+        }
+        [data-admin-theme="dark"] .btn-danger:hover {
+            background: var(--admin-danger) !important;
+            color: #ffffff !important;
+        }
+        [data-admin-theme="dark"] .btn-success {
+            background: var(--admin-success) !important;
+            border-color: #15803d !important;
+            color: #ffffff !important;
+        }
+        [data-admin-theme="dark"] .nav-tabs {
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] .nav-link {
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] .nav-link.active {
+            color: var(--admin-primary) !important;
+            border-bottom-color: var(--admin-primary) !important;
+        }
+        [data-admin-theme="dark"] .bulk-count-badge {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] .bulk-count-badge.has-selected {
+            background: var(--admin-primary) !important;
+            color: #ffffff !important;
+            border-color: var(--admin-primary) !important;
+        }
+        [data-admin-theme="dark"] ul.subsubsub a.current {
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] ul.subsubsub {
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] code,
+        [data-admin-theme="dark"] pre {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: #38bdf8 !important;
+        }
+        [data-admin-theme="dark"] hr {
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] .notice,
+        [data-admin-theme="dark"] .alert {
+            background: var(--admin-surface) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .notice-success,
+        [data-admin-theme="dark"] .alert-success {
+            background: var(--admin-success-bg) !important;
+            color: var(--admin-success-text) !important;
+            border-left-color: var(--admin-success) !important;
+        }
+        [data-admin-theme="dark"] .notice-error,
+        [data-admin-theme="dark"] .alert-danger {
+            background: var(--admin-danger-bg) !important;
+            color: var(--admin-danger-text) !important;
+            border-left-color: var(--admin-danger) !important;
+        }
+        [data-admin-theme="dark"] .notice-warning,
+        [data-admin-theme="dark"] .alert-warning {
+            background: var(--admin-warning-bg) !important;
+            color: var(--admin-warning-text) !important;
+            border-left-color: var(--admin-warning) !important;
+        }
+        [data-admin-theme="dark"] .notice-info,
+        [data-admin-theme="dark"] .alert-info {
+            background: var(--admin-info-bg) !important;
+            color: var(--admin-info-text) !important;
+            border-left-color: var(--admin-info) !important;
+        }
+        [data-admin-theme="dark"] .badge-secondary,
+        [data-admin-theme="dark"] .badge.bg-secondary {
+            background: var(--admin-surface-elevated) !important;
+            color: var(--admin-text-muted) !important;
+            border-color: var(--admin-border) !important;
+        }
+        /* Menu Management dark theme rules */
+        [data-admin-theme="dark"] .menu-item-row {
+            background: var(--admin-surface) !important;
+            border-color: var(--admin-border) !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+        }
+        [data-admin-theme="dark"] .menu-item-bar {
+            background: var(--admin-surface) !important;
+        }
+        [data-admin-theme="dark"] .menu-item-editor {
+            background: var(--admin-surface-subtle) !important;
+            border-top-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] .menu-item-title-display {
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] .menu-sub-item-badge {
+            background: var(--admin-surface-elevated) !important;
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-move-up,
+        [data-admin-theme="dark"] .btn-menu-action.btn-move-down {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-move-up:hover,
+        [data-admin-theme="dark"] .btn-menu-action.btn-move-down:hover {
+            background: var(--admin-surface-elevated) !important;
+            color: var(--admin-text-heading) !important;
+            border-color: var(--admin-border-subtle) !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-menu-edit {
+            background: rgba(59, 130, 246, 0.15) !important;
+            border-color: rgba(59, 130, 246, 0.35) !important;
+            color: #93c5fd !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-menu-edit:hover {
+            background: rgba(59, 130, 246, 0.25) !important;
+            color: #bfdbfe !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-menu-remove {
+            background: rgba(239, 68, 68, 0.15) !important;
+            border-color: rgba(239, 68, 68, 0.35) !important;
+            color: #fca5a5 !important;
+        }
+        [data-admin-theme="dark"] .btn-menu-action.btn-menu-remove:hover {
+            background: var(--admin-danger) !important;
+            color: #ffffff !important;
+        }
+        /* Fallback for inline-styled white/light containers across admin views */
+        [data-admin-theme="dark"] div[style*="background: #f8fafc"],
+        [data-admin-theme="dark"] div[style*="background:#f8fafc"] {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] div[style*="background: #ffffff"],
+        [data-admin-theme="dark"] div[style*="background:#ffffff"],
+        [data-admin-theme="dark"] div[style*="background: #fff"],
+        [data-admin-theme="dark"] div[style*="background:#fff"] {
+            background: var(--admin-surface) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] div[style*="color: #0f172a"],
+        [data-admin-theme="dark"] div[style*="color: #1d2327"],
+        [data-admin-theme="dark"] div[style*="color: #1e293b"],
+        [data-admin-theme="dark"] span[style*="color: #0f172a"],
+        [data-admin-theme="dark"] strong[style*="color: #0f172a"] {
+            color: var(--admin-text-heading) !important;
+        }
+        /* Editor wrapper and toolbars */
+        [data-admin-theme="dark"] .editor-wrapper,
+        [data-admin-theme="dark"] #visual-toolbar,
+        [data-admin-theme="dark"] #code-toolbar,
+        [data-admin-theme="dark"] #visual-mode-container {
+            background: var(--admin-surface) !important;
+            border-color: var(--admin-border) !important;
+        }
+        [data-admin-theme="dark"] #visual-editor {
+            background: var(--admin-surface) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .rich-btn,
+        [data-admin-theme="dark"] .code-insert-btn,
+        [data-admin-theme="dark"] .toolbar-select {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] .rich-btn:hover,
+        [data-admin-theme="dark"] .code-insert-btn:hover {
+            background: var(--admin-surface-elevated) !important;
+            color: var(--admin-text-heading) !important;
+        }
+        [data-admin-theme="dark"] .modal-tab-btn {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+            color: var(--admin-text-muted) !important;
+        }
+        [data-admin-theme="dark"] .modal-tab-btn.active {
+            background: var(--admin-surface) !important;
+            border-color: var(--admin-primary) !important;
+            color: var(--admin-primary) !important;
+        }
+        [data-admin-theme="dark"] #preview-modal > div,
+        [data-admin-theme="dark"] #media-modal > div {
+            background: var(--admin-surface) !important;
+            color: var(--admin-text) !important;
+        }
+        [data-admin-theme="dark"] #preview-modal div[style*="background: #f8fafc"],
+        [data-admin-theme="dark"] #media-modal div[style*="background: #f8fafc"] {
+            background: var(--admin-surface-subtle) !important;
+            border-color: var(--admin-border) !important;
+        }
     </style>
 </head>
 <body>
@@ -605,6 +1105,15 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
             <a href="/" target="_blank" title="Visit Site"><span class="star">&#9733;</span> <strong><?php echo htmlspecialchars($siteName, ENT_QUOTES, 'UTF-8'); ?></strong> &rarr;</a>
         </div>
         <div class="topbar-right">
+            <button type="button" 
+                    id="admin-theme-toggle" 
+                    class="admin-theme-toggle" 
+                    aria-label="<?php echo $adminTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'; ?>" 
+                    title="<?php echo $adminTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'; ?>" 
+                    aria-pressed="<?php echo $adminTheme === 'dark' ? 'true' : 'false'; ?>">
+                <span class="theme-icon-sun" aria-hidden="true" style="<?php echo $adminTheme === 'dark' ? 'display:inline-flex;' : 'display:none;'; ?>">☀️</span>
+                <span class="theme-icon-moon" aria-hidden="true" style="<?php echo $adminTheme === 'dark' ? 'display:none;' : 'display:inline-flex;'; ?>">🌙</span>
+            </button>
             <span>Howdy, <strong><?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?></strong></span>
             <a href="/admin/users/profile">Edit Profile</a>
             <a href="/admin/logout" style="color: #fca5a5;">Log Out</a>
@@ -1032,6 +1541,51 @@ $siteFaviconUrl = function_exists('get_site_favicon_url') ? get_site_favicon_url
                 sidebar.classList.remove('is-open');
                 backdrop.classList.remove('is-active');
                 menuBtn.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        // Admin Dark/Light Mode toggle handler
+        var themeToggleBtn = document.getElementById('admin-theme-toggle');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', function() {
+                var currentTheme = document.documentElement.getAttribute('data-admin-theme') || 'light';
+                var nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                var isDark = nextTheme === 'dark';
+
+                // 1. Update DOM immediately
+                document.documentElement.setAttribute('data-admin-theme', nextTheme);
+
+                // 2. Update toggle button attributes and icons
+                themeToggleBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+                var labelText = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+                themeToggleBtn.setAttribute('aria-label', labelText);
+                themeToggleBtn.setAttribute('title', labelText);
+                var sunIcon = themeToggleBtn.querySelector('.theme-icon-sun');
+                var moonIcon = themeToggleBtn.querySelector('.theme-icon-moon');
+                if (sunIcon) sunIcon.style.display = isDark ? 'inline-flex' : 'none';
+                if (moonIcon) moonIcon.style.display = isDark ? 'none' : 'inline-flex';
+
+                // 3. Save to localStorage for early flash-free client bootstrap
+                try {
+                    localStorage.setItem('favorite_admin_theme', nextTheme);
+                } catch (e) {}
+
+                // 4. Send background POST to persist in authoritative Core Setting for authenticated user
+                var csrfToken = <?php echo json_encode($_SESSION['_token'] ?? ''); ?>;
+                var formData = new FormData();
+                formData.append('_token', csrfToken);
+                formData.append('theme', nextTheme);
+
+                fetch('/admin/appearance/toggle', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).catch(function(err) {
+                    console.warn('Could not persist admin appearance to server:', err);
+                });
             });
         }
     });
