@@ -182,4 +182,49 @@ class PrimaryCurrencySettingTest extends TestCase
         $this->assertSame('BDT', Currency::getPrimaryCurrency());
         $this->assertStringContainsString('Invalid Primary Currency', $_SESSION['flash_error'] ?? '');
     }
+
+    public function testGetSymbolAndFormatMethods(): void
+    {
+        Currency::setPrimaryCurrency('BDT');
+        $this->assertSame('৳', Currency::getSymbol());
+        $this->assertSame('৳', Currency::getSymbol('BDT'));
+        $this->assertSame('₹', Currency::getSymbol('INR'));
+        $this->assertSame('$', Currency::getSymbol('USD'));
+        $this->assertSame('€', Currency::getSymbol('EUR'));
+        $this->assertSame('£', Currency::getSymbol('GBP'));
+        $this->assertSame('¥', Currency::getSymbol('JPY'));
+
+        $this->assertSame('৳300.00', Currency::format(300));
+        $this->assertSame('৳300.00 BDT', Currency::format(300, null, true));
+        $this->assertSame('₹300.00', Currency::format(300, 'INR'));
+        $this->assertSame('₹300.00 INR', Currency::format(300, 'INR', true));
+        $this->assertSame('¥500', Currency::format(500, 'JPY'));
+
+        $this->assertSame('৳', currency_symbol());
+        $this->assertSame('₹', currency_symbol('INR'));
+        $this->assertSame('৳500.00', format_currency(500));
+        $this->assertSame('₹500.00', format_currency(500, 'INR'));
+        $this->assertSame('₹500.00 INR', format_currency(500, 'INR', true));
+    }
+
+    public function testPrimaryChangedActionFiresOnCurrencyChange(): void
+    {
+        $actionFired = null;
+        if (function_exists('add_action')) {
+            add_action('currency.primary_changed', function ($payload) use (&$actionFired) {
+                $actionFired = $payload;
+            });
+        }
+
+        Currency::setPrimaryCurrency('INR');
+        $this->assertSame('INR', Currency::getPrimaryCurrency());
+        if (function_exists('add_action')) {
+            $this->assertNotNull($actionFired);
+            $this->assertSame('BDT', $actionFired['old'] ?? null);
+            $this->assertSame('INR', $actionFired['new'] ?? null);
+        }
+
+        // Clean up
+        Currency::setPrimaryCurrency('BDT');
+    }
 }

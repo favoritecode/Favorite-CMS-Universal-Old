@@ -169,6 +169,41 @@ class Currency
     }
 
     /**
+     * Get the currency symbol for a given ISO currency code.
+     * Falls back to the site's primary currency symbol if no code is provided.
+     */
+    public static function getSymbol(?string $code = null): string
+    {
+        $normalized = $code !== null ? self::normalize($code) : self::getPrimaryCurrency();
+        return self::$supportedCurrencies[$normalized]['symbol'] ?? $normalized;
+    }
+
+    /**
+     * Format a monetary amount with currency symbol and precision.
+     *
+     * @param float|int|string $amount Amount to format
+     * @param string|null $currency Currency ISO code (defaults to primary currency)
+     * @param bool $includeCode Whether to append the currency ISO code (e.g. "₹300.00 INR")
+     * @return string Formatted currency string (e.g. "₹300.00" or "$10.50")
+     */
+    public static function format(float|int|string $amount, ?string $currency = null, bool $includeCode = false): string
+    {
+        $curr = $currency !== null ? self::normalize($currency) : self::getPrimaryCurrency();
+        $symbol = self::getSymbol($curr);
+        $decimals = self::getDecimals($curr);
+
+        $numeric = is_numeric($amount) ? (float)$amount : 0.0;
+        $formattedNum = number_format($numeric, $decimals, '.', ',');
+
+        $result = $symbol . $formattedNum;
+        if ($includeCode) {
+            $result .= ' ' . $curr;
+        }
+
+        return $result;
+    }
+
+    /**
      * Get the site's authoritative Primary Accounting Currency.
      *
      * Source of truth: Core Settings (group: 'general', key: 'primary_currency').
@@ -195,18 +230,19 @@ class Currency
 
     /**
      * Check if the site's primary currency is locked against modifications.
-     * Returns true if existing financial activity or system rules prevent changing it.
+     * Note: Changing primary currency is permitted as a site-wide denomination change.
+     * Plugins may hook 'currency.is_primary_locked' if specific lock constraints are required.
      */
     public static function isPrimaryCurrencyLocked(?string &$reason = null): bool
     {
         if (function_exists('apply_filters')) {
             $lockResult = apply_filters('currency.is_primary_locked', false);
             if ($lockResult === true) {
-                $reason = 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = 'Primary Currency is locked by system policy.';
                 return true;
             }
             if (is_array($lockResult) && !empty($lockResult['locked'])) {
-                $reason = $lockResult['reason'] ?? 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = $lockResult['reason'] ?? 'Primary Currency is locked by system policy.';
                 return true;
             }
 
@@ -215,11 +251,11 @@ class Currency
             $probe = ($current === 'USD') ? 'EUR' : 'USD';
             $changeResult = apply_filters('currency.can_change_primary', true, $probe, $current);
             if ($changeResult === false) {
-                $reason = 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = 'Primary Currency cannot be changed.';
                 return true;
             }
             if (is_array($changeResult) && isset($changeResult['allowed']) && !$changeResult['allowed']) {
-                $reason = $changeResult['reason'] ?? 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = $changeResult['reason'] ?? 'Primary Currency cannot be changed.';
                 return true;
             }
         }
@@ -247,11 +283,11 @@ class Currency
         if (function_exists('apply_filters')) {
             $result = apply_filters('currency.can_change_primary', true, $normalized, $current);
             if ($result === false) {
-                $reason = $reason ?? 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = $reason ?? 'Primary Currency cannot be changed.';
                 return false;
             }
             if (is_array($result) && isset($result['allowed']) && !$result['allowed']) {
-                $reason = $result['reason'] ?? 'Primary Currency cannot be changed after financial activity has started.';
+                $reason = $result['reason'] ?? 'Primary Currency cannot be changed.';
                 return false;
             }
         }
@@ -263,11 +299,11 @@ class Currency
      * Set the site's authoritative Primary Accounting Currency.
      *
      * Validates that the code is a valid supported ISO currency.
-     * Validates that changing the currency is permitted (no existing financial records).
      * Persists as uppercase string in Core Settings.
+     * Triggers 'currency.primary_changed' action hook.
      *
      * @throws InvalidArgumentException If the currency code is unsupported or invalid.
-     * @throws RuntimeException If primary currency cannot be changed due to financial activity.
+     * @throws RuntimeException If primary currency cannot be changed.
      */
     public static function setPrimaryCurrency(string $code): void
     {
@@ -287,7 +323,7 @@ class Currency
         $reason = null;
         if (!self::canChangePrimaryCurrency($normalized, $reason)) {
             throw new RuntimeException(
-                $reason ?? "Cannot change primary currency once financial activity has started."
+                $reason ?? "Cannot change primary currency."
             );
         }
 

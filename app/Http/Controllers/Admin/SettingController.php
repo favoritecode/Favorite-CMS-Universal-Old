@@ -194,7 +194,7 @@ class SettingController
         if ($normalizedCurrency !== $currentCurrency) {
             $reason = null;
             if (!Currency::canChangePrimaryCurrency($normalizedCurrency, $reason)) {
-                $_SESSION['flash_error'] = $reason ?? "Primary Currency cannot be changed after financial activity has started.";
+                $_SESSION['flash_error'] = $reason ?? "Primary Currency cannot be changed.";
                 return Response::redirect('/admin/settings');
             }
 

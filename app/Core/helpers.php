@@ -346,6 +346,20 @@ if (!function_exists('primary_currency')) {
     }
 }
 
+if (!function_exists('currency_symbol')) {
+    function currency_symbol(?string $code = null): string
+    {
+        return \FavoriteCMS\Core\Currency::getSymbol($code);
+    }
+}
+
+if (!function_exists('format_currency')) {
+    function format_currency(float|int|string $amount, ?string $currency = null, bool $includeCode = false): string
+    {
+        return \FavoriteCMS\Core\Currency::format($amount, $currency, $includeCode);
+    }
+}
+
 // -----------------------------------------------------------------------------
 // Current User & Capability APIs
 // -----------------------------------------------------------------------------

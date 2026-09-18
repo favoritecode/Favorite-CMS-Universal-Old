@@ -3,6 +3,16 @@
 All notable changes to **Favorite CMS Universal** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2026-09-18
+
+### Added
+- **Authoritative Global Currency Architecture**:
+  - Added `Currency::getSymbol(?string $code = null): string` and `Currency::format(float|int|string $amount, ?string $currency = null, bool $includeCode = false): string`.
+  - Added global helper functions `currency_symbol(?string $code = null): string` and `format_currency(float|int|string $amount, ?string $currency = null, bool $includeCode = false): string`.
+  - Allowed changing Primary Currency in `Settings → Primary Currency` at any time as a site-wide denomination change.
+  - Removed the permanent lock preventing currency modification after financial activity.
+  - Emitted `currency.primary_changed` action hook with `['old' => $oldCurrency, 'new' => $newCurrency]` for downstream ecosystem alignment.
+
 ## [1.0.14] - 2026-09-18
 
 ### Fixed
