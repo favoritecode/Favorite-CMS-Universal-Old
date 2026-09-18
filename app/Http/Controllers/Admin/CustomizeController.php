@@ -7,6 +7,8 @@ namespace FavoriteCMS\Http\Controllers\Admin;
 use FavoriteCMS\Core\Application;
 use FavoriteCMS\Core\Request;
 use FavoriteCMS\Core\Response;
+use FavoriteCMS\Models\Setting;
+use FavoriteCMS\Themes\BuilderElementRegistry;
 use FavoriteCMS\Themes\ThemeLayoutService;
 
 class CustomizeController
@@ -43,20 +45,43 @@ class CustomizeController
             $contentView = apply_filters('theme_customizer_view', $contentView, $themeId, $mods, $sections);
         }
 
+        $globalTokens = $this->layoutService->getGlobalDesignTokens($themeId);
+        $builderTree = $this->layoutService->getBuilderTree($themeId);
+        $templates = $this->layoutService->getTemplates($themeId);
+        $elementsRegistry = BuilderElementRegistry::getInstance()->all();
+
+        try {
+            $siteName = Setting::get('general', 'site_name', 'Favorite CMS');
+        } catch (\Throwable) {
+            $siteName = 'Favorite CMS';
+        }
+
+        $adminTheme = $_SESSION['admin_theme'] ?? 'light';
+        if ($adminTheme !== 'dark') {
+            $adminTheme = 'light';
+        }
+
         $viewData = [
-            'pageTitle'   => 'Customize Theme',
-            'activeMenu'  => 'customize',
-            'themeName'   => $manifest['name'] ?? ucfirst($themeId),
-            'themeId'     => $themeId,
-            'manifest'    => $manifest,
-            'sections'    => $sections,
-            'mods'        => $mods,
-            'contentView' => $contentView,
+            'pageTitle'        => 'Customize: ' . ($manifest['name'] ?? ucfirst($themeId)),
+            'themeName'        => $manifest['name'] ?? ucfirst($themeId),
+            'themeId'          => $themeId,
+            'manifest'         => $manifest,
+            'sections'         => $sections,
+            'mods'             => $mods,
+            'contentView'      => $contentView,
+            'globalTokens'     => $globalTokens,
+            'builderTree'      => $builderTree,
+            'templates'        => $templates,
+            'elementsRegistry' => $elementsRegistry,
+            'csrfToken'        => csrf_token(),
+            'adminTheme'       => $adminTheme,
+            'siteName'         => $siteName,
+            'siteFaviconUrl'   => get_site_favicon_url(''),
         ];
 
         extract($viewData, EXTR_SKIP);
         ob_start();
-        include APP_ROOT . '/resources/views/admin/layout.php';
+        include APP_ROOT . '/resources/views/admin/customize/shell.php';
         return Response::make((string)ob_get_clean(), 200);
     }
 
@@ -64,7 +89,7 @@ class CustomizeController
     {
         $themeId = $this->layoutService->getActiveThemeId();
 
-        // 1. Save theme mods (layout, colors, logo, copyright)
+        // 1. Save theme mods (layout, colors, logo, copyright, custom css, etc.)
         $mods = (array)$request->post('mods', []);
         foreach ($mods as $key => $val) {
             $keyStr = (string)$key;
@@ -97,11 +122,47 @@ class CustomizeController
             }
         }
 
+        // 4. Save Visual Builder tree if provided
+        $builderTree = $request->post('builder_tree');
+        if ($builderTree !== null) {
+            if (is_string($builderTree)) {
+                $builderTree = json_decode($builderTree, true);
+            }
+            if (is_array($builderTree)) {
+                try {
+                    $this->layoutService->saveBuilderTree($builderTree, $themeId);
+                } catch (\Throwable $e) {
+                    if ($this->isAjaxRequest($request)) {
+                        return Response::json(['success' => false, 'error' => $e->getMessage()], 400);
+                    }
+                }
+            }
+        }
+
+        // 5. Save Global Design Tokens if provided
+        $globalTokens = $request->post('tokens');
+        if ($globalTokens !== null) {
+            if (is_string($globalTokens)) {
+                $globalTokens = json_decode($globalTokens, true);
+            }
+            if (is_array($globalTokens)) {
+                $this->layoutService->saveGlobalDesignTokens($globalTokens, $themeId);
+            }
+        }
+
         if (function_exists('do_action')) {
             do_action('customize_save_after', $request, $themeId);
         }
 
         $_SESSION['flash_success'] = 'Theme layout and customization saved successfully.';
+
+        if ($this->isAjaxRequest($request)) {
+            return Response::json([
+                'success' => true,
+                'message' => 'Theme layout and customization saved successfully.',
+            ]);
+        }
+
         return Response::redirect('/admin/customize');
     }
 
@@ -126,6 +187,10 @@ class CustomizeController
             }
         }
 
+        if ($this->isAjaxRequest($request)) {
+            return Response::json(['success' => true, 'order' => $this->layoutService->getSections($themeId)]);
+        }
+
         return Response::redirect('/admin/customize');
     }
 
@@ -137,7 +202,59 @@ class CustomizeController
             do_action('customize_reset_after', $themeId);
         }
         $_SESSION['flash_success'] = 'Theme settings and sections restored to defaults.';
+
+        if ($this->isAjaxRequest($request)) {
+            return Response::json(['success' => true, 'message' => 'Theme settings restored to defaults.']);
+        }
+
         return Response::redirect('/admin/customize');
     }
-}
 
+    public function getTemplates(Request $request): Response
+    {
+        $themeId = (string)($request->get('theme_id', '') ?: $this->layoutService->getActiveThemeId());
+        $templates = $this->layoutService->getTemplates($themeId);
+        return Response::json(['success' => true, 'templates' => $templates]);
+    }
+
+    public function saveTemplate(Request $request): Response
+    {
+        $themeId = (string)($request->post('theme_id', '') ?: $this->layoutService->getActiveThemeId());
+        $name = trim((string)$request->post('name', 'New Template'));
+        $data = $request->post('data', []);
+        if (is_string($data)) {
+            $data = json_decode($data, true) ?: [];
+        }
+
+        try {
+            $template = $this->layoutService->saveTemplate($name, (array)$data, $themeId);
+            return Response::json(['success' => true, 'template' => $template]);
+        } catch (\Throwable $e) {
+            return Response::json(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    public function deleteTemplate(Request $request): Response
+    {
+        $themeId = (string)($request->post('theme_id', '') ?: $this->layoutService->getActiveThemeId());
+        $templateId = (string)$request->post('template_id', '');
+
+        if ($templateId === '') {
+            return Response::json(['success' => false, 'error' => 'Template ID is required.'], 400);
+        }
+
+        try {
+            $this->layoutService->deleteTemplate($templateId, $themeId);
+            return Response::json(['success' => true, 'message' => 'Template deleted successfully.']);
+        } catch (\Throwable $e) {
+            return Response::json(['success' => false, 'error' => $e->getMessage()], 400);
+        }
+    }
+
+    protected function isAjaxRequest(Request $request): bool
+    {
+        return $request->isAjax()
+            || str_contains((string)$request->header('Accept'), 'application/json')
+            || !empty($request->post('_ajax'));
+    }
+}

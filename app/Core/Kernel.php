@@ -569,6 +569,9 @@ class Kernel
                 '/admin/customize/save'             => $ctrl->save($request),
                 '/admin/customize/sections/reorder' => $ctrl->reorderSections($request),
                 '/admin/customize/reset'            => $ctrl->reset($request),
+                '/admin/customize/templates'        => $ctrl->getTemplates($request),
+                '/admin/customize/templates/save'   => $ctrl->saveTemplate($request),
+                '/admin/customize/templates/delete' => $ctrl->deleteTemplate($request),
                 default                             => Response::redirect('/admin/customize'),
             };
         }
