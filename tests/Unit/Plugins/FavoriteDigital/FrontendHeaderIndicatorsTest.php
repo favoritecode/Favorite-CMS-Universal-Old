@@ -153,8 +153,10 @@ class FrontendHeaderIndicatorsTest extends TestCase
         $this->assertStringContainsString('icon-premium-diamond', $html);
         $this->assertStringContainsString('title="Active Premium Member"', $html);
 
-        // Since theme didn't render wallet pill, fallback prepends wallet pill
-        $this->assertStringContainsString('header-wallet-pill', $html);
+        // Exact occurrence verification: exactly 1 diamond badge and 1 wallet pill
+        $this->assertSame(1, substr_count($html, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($html, 'icon-premium-diamond'));
+        $this->assertSame(1, substr_count($html, 'header-wallet-pill'));
         $this->assertStringContainsString('৳500.00', $html);
     }
 
@@ -174,9 +176,12 @@ class FrontendHeaderIndicatorsTest extends TestCase
         $html = AccountMenu::render(['user' => $user]);
         $this->assertStringNotContainsString('cms-premium-badge', $html);
         $this->assertStringNotContainsString('icon-premium-diamond', $html);
+        $this->assertSame(0, substr_count($html, 'cms-premium-badge'));
+        $this->assertSame(0, substr_count($html, 'icon-premium-diamond'));
 
-        // Wallet is still visible
+        // Wallet is still visible (exactly 1)
         $this->assertStringContainsString('header-wallet-pill', $html);
+        $this->assertSame(1, substr_count($html, 'header-wallet-pill'));
         $this->assertStringContainsString('৳250.00', $html);
     }
 
@@ -200,6 +205,8 @@ class FrontendHeaderIndicatorsTest extends TestCase
         $html = AccountMenu::render(['user' => $user]);
         $this->assertStringNotContainsString('cms-premium-badge', $html);
         $this->assertStringNotContainsString('icon-premium-diamond', $html);
+        $this->assertSame(0, substr_count($html, 'cms-premium-badge'));
+        $this->assertSame(0, substr_count($html, 'icon-premium-diamond'));
     }
 
     /**
@@ -222,6 +229,8 @@ class FrontendHeaderIndicatorsTest extends TestCase
         $html = AccountMenu::render(['user' => $user]);
         $this->assertStringNotContainsString('cms-premium-badge', $html);
         $this->assertStringNotContainsString('icon-premium-diamond', $html);
+        $this->assertSame(0, substr_count($html, 'cms-premium-badge'));
+        $this->assertSame(0, substr_count($html, 'icon-premium-diamond'));
     }
 
     /**
@@ -401,5 +410,114 @@ class FrontendHeaderIndicatorsTest extends TestCase
 
         // Because theme already rendered wallet pill, filter must NOT add duplicate
         $this->assertStringNotContainsString('header-wallet-pill', $html);
+        $this->assertSame(0, substr_count($html, 'header-wallet-pill'));
+    }
+
+    /**
+     * Regression Test 1: Favorite Web + logged in + wallet balance
+     * → Theme renders 1 pill outside menu, menu HTML contains 0 pills
+     * → Total on page = exactly 1 wallet pill
+     */
+    public function testFavoriteWebThemeLoggedinWalletExactOnePill(): void
+    {
+        $user = $this->createMockUser(113, 'FW Wallet User');
+        $this->walletService->credit(113, '650.00', 'cr_fw_1', 'Top-up');
+
+        // Favorite Web header.php calls fw_wallet_balance()
+        $fwThemeBal = fw_wallet_balance(113);
+        $this->assertSame('৳650.00', $fwThemeBal);
+
+        // Favorite Web header.php renders wallet pill outside AccountMenu:
+        $headerPillHtml = '<a class="header-wallet-pill" href="/account/wallet"><span class="header-wallet-amount">' . $fwThemeBal . '</span></a>';
+
+        // Then Favorite Web header.php calls render_account_menu()
+        $menuHtml = AccountMenu::render(['user' => $user]);
+
+        // Menu HTML must NOT contain a second wallet pill
+        $this->assertSame(0, substr_count($menuHtml, 'header-wallet-pill'));
+
+        // Combined page HTML contains EXACTLY 1 wallet pill
+        $pageHtml = $headerPillHtml . "\n" . $menuHtml;
+        $this->assertSame(1, substr_count($pageHtml, 'header-wallet-pill'));
+    }
+
+    /**
+     * Regression Test 2: Favorite Web + active premium membership
+     * → AccountMenu contains EXACTLY 1 diamond badge
+     */
+    public function testFavoriteWebActivePremiumExactOneDiamond(): void
+    {
+        $user = $this->createMockUser(114, 'FW Premium User');
+        $this->createActiveMembership(114);
+
+        // Favorite Web header.php renders menu
+        $menuHtml = AccountMenu::render(['user' => $user]);
+
+        // Exactly 1 diamond badge and 1 diamond SVG icon
+        $this->assertSame(1, substr_count($menuHtml, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($menuHtml, 'icon-premium-diamond'));
+    }
+
+    /**
+     * Regression Test 3: Non-Favorite-Web theme + Favorite Digital
+     * → Menu HTML contains EXACTLY 1 wallet pill
+     * → Menu HTML contains EXACTLY 1 premium diamond
+     */
+    public function testNonFavoriteWebThemeExactOneWalletAndOneDiamond(): void
+    {
+        $user = $this->createMockUser(115, 'Non-FW User');
+        $this->walletService->credit(115, '400.00', 'cr_non_fw_1', 'Credit');
+        $this->createActiveMembership(115);
+
+        // Non-Favorite-Web theme does NOT call fw_wallet_balance(), calls AccountMenu directly
+        $menuHtml = AccountMenu::render(['user' => $user]);
+
+        // Fallback wallet pill is added EXACTLY 1 time
+        $this->assertSame(1, substr_count($menuHtml, 'header-wallet-pill'));
+        $this->assertSame(1, substr_count($menuHtml, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($menuHtml, 'icon-premium-diamond'));
+    }
+
+    /**
+     * Regression Test 4: Idempotency on repeated filter/render execution
+     * (e.g. desktop header + mobile drawer on the same page)
+     * → Neither wallet pill nor diamond badge can ever be duplicated
+     */
+    public function testRepeatedFilterExecutionIdempotency(): void
+    {
+        $user = $this->createMockUser(116, 'Drawer User');
+        $this->walletService->credit(116, '800.00', 'cr_rep_1', 'Credit');
+        $this->createActiveMembership(116);
+
+        // First render (Desktop header)
+        $desktopHtml = AccountMenu::render(['user' => $user]);
+        $this->assertSame(1, substr_count($desktopHtml, 'header-wallet-pill'));
+        $this->assertSame(1, substr_count($desktopHtml, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($desktopHtml, 'icon-premium-diamond'));
+
+        // Second render (Mobile drawer) in same request lifecycle
+        $mobileHtml = AccountMenu::render(['user' => $user]);
+        $this->assertSame(1, substr_count($mobileHtml, 'header-wallet-pill'));
+        $this->assertSame(1, substr_count($mobileHtml, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($mobileHtml, 'icon-premium-diamond'));
+
+        // Direct filter re-application on already formatted HTML must not duplicate
+        $doubleFiltered = $this->plugin->filterRenderAccountMenu($desktopHtml, [], $user);
+        $this->assertSame(1, substr_count($doubleFiltered, 'header-wallet-pill'));
+        $this->assertSame(1, substr_count($doubleFiltered, 'cms-premium-badge'));
+        $this->assertSame(1, substr_count($doubleFiltered, 'icon-premium-diamond'));
+    }
+
+    /**
+     * Regression Test 5: Plugin bootstrap singleton
+     * → Multiple bootstrap calls return the same instance and do not duplicate filter hooks
+     */
+    public function testPluginBootstrapSingletonPreventsDuplicateHooks(): void
+    {
+        $app = new Application();
+        $instance1 = FavoriteDigitalPlugin::bootstrap($app);
+        $instance2 = FavoriteDigitalPlugin::bootstrap($app);
+
+        $this->assertSame($instance1, $instance2);
     }
 }
