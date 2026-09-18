@@ -34,6 +34,15 @@ class CustomizeController
             $mods['site_favicon_url'] = get_site_favicon_url();
         }
 
+        $contentView = APP_ROOT . '/resources/views/admin/customize/index.php';
+        $themeCustomizer = APP_ROOT . '/themes/' . $themeId . '/customizer.php';
+        if (file_exists($themeCustomizer)) {
+            $contentView = $themeCustomizer;
+        }
+        if (function_exists('apply_filters')) {
+            $contentView = apply_filters('theme_customizer_view', $contentView, $themeId, $mods, $sections);
+        }
+
         $viewData = [
             'pageTitle'   => 'Customize Theme',
             'activeMenu'  => 'customize',
@@ -42,7 +51,7 @@ class CustomizeController
             'manifest'    => $manifest,
             'sections'    => $sections,
             'mods'        => $mods,
-            'contentView' => APP_ROOT . '/resources/views/admin/customize/index.php',
+            'contentView' => $contentView,
         ];
 
         extract($viewData, EXTR_SKIP);
@@ -75,6 +84,23 @@ class CustomizeController
             $this->layoutService->updateSection($sid, ['enabled' => $isEnabled], $themeId);
         }
 
+        // 3. Save batch section order if provided
+        $sectionOrder = (array)$request->post('section_order', []);
+        if (!empty($sectionOrder)) {
+            $validIds = array_column($allSections, 'id');
+            $cleanOrder = array_values(array_filter(
+                array_map('strval', $sectionOrder),
+                static fn(string $id): bool => in_array($id, $validIds, true)
+            ));
+            if (!empty($cleanOrder)) {
+                $this->layoutService->reorderSections($cleanOrder, $themeId);
+            }
+        }
+
+        if (function_exists('do_action')) {
+            do_action('customize_save_after', $request, $themeId);
+        }
+
         $_SESSION['flash_success'] = 'Theme layout and customization saved successfully.';
         return Response::redirect('/admin/customize');
     }
@@ -105,7 +131,11 @@ class CustomizeController
 
     public function reset(Request $request): Response
     {
-        $this->layoutService->resetThemeLayout();
+        $themeId = $this->layoutService->getActiveThemeId();
+        $this->layoutService->resetThemeLayout($themeId);
+        if (function_exists('do_action')) {
+            do_action('customize_reset_after', $themeId);
+        }
         $_SESSION['flash_success'] = 'Theme settings and sections restored to defaults.';
         return Response::redirect('/admin/customize');
     }

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 if (!defined('APP_VERSION')) {
-    define('APP_VERSION', '1.0.16');
+    define('APP_VERSION', '1.0.17');
 }
 if (!defined('CMS_NAME')) {
     define('CMS_NAME', 'Favorite CMS');
